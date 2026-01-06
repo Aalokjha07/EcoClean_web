@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@import 'leaflet/dist/leaflet.css'; /* Import Leaflet CSS */
+
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #F8FAFC;
+}
+
+/* Custom Animations */
+.drawer-content { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.drawer-backdrop { transition: opacity 0.3s ease; }
+.bento-card { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Dashboard Specifics */
+.hover-card-emerald:hover {
+    background-color: #10b981;
+    transform: translateY(-4px) scale(1.02);
+    color: white !important;
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.2);
+}
+.hover-card-emerald:hover p, .hover-card-emerald:hover h4 { color: white !important; }
+
+.hover-card-slate:hover {
+    background-color: #0f172a;
+    transform: translateY(-4px) scale(1.02);
+    color: white !important;
+    box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.2);
+}
+.hover-card-slate:hover p, .hover-card-slate:hover h4 { color: white !important; }
+
+@keyframes float {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(5deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 0.2; }
+    100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+@keyframes rotate-border {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.eco-sphere { animation: float 4s ease-in-out infinite; }
+.pulse-effect { animation: pulse-ring 3s ease-in-out infinite; }
+.spinning-border { animation: rotate-border 10s linear infinite; }
+
+/* Settings Switch */
+.switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #E2E8F0; transition: .4s; border-radius: 24px;
+}
+.slider:before {
+    position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+    background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider { background-color: #10b981; }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* About Us Dark Mode Helpers */
+.dark-mode { background-color: #0f172a; color: #f8fafc; }
+.dark-mode .bg-white { background-color: #1e293b; border-color: #334155; }
