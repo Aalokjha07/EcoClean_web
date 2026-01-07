@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from "react"; // Added useEffect
+import React, { useState, useEffect } from "react";
 import Navbar from "../../components/Navbar";
+import { X, MapPin, Clock, Info } from "lucide-react"; // Added icons for the popup
 
 export default function MyReports() {
   const [filter, setFilter] = useState("All");
-  // State for real database reports
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch data from your backend
+  // State for the Detail Popup
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  const SERVER_URL = "http://localhost:3000";
+
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        // This hits the GET /api/Reports route in your backend
-        const response = await fetch("http://localhost:3000/api/Reports");
+        const response = await fetch(`${SERVER_URL}/api/Reports`);
         const data = await response.json();
         setReports(data);
         setLoading(false);
@@ -24,13 +27,18 @@ export default function MyReports() {
     fetchReports();
   }, []);
 
-  // 2. Delete function to connect to your backend delete route
+  // Helper to fix the image loading issue
+  const getFullUrl = (path) => {
+    if (!path) return "https://via.placeholder.com/600x400?text=No+Image";
+    if (path.startsWith("blob:") || path.startsWith("http")) return path;
+    const cleanPath = path.replace(/^\/+/, "");
+    return `${SERVER_URL}/uploads/${cleanPath}`;
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this report?")) {
       try {
-        await fetch(`http://localhost:3000/api/Report/${id}`, {
-          method: "DELETE",
-        });
+        await fetch(`${SERVER_URL}/api/Report/${id}`, { method: "DELETE" });
         setReports(reports.filter((r) => r._id !== id));
       } catch (error) {
         console.error("Delete failed:", error);
@@ -38,19 +46,12 @@ export default function MyReports() {
     }
   };
 
-  // 3. Filter the live data
   const filteredReports = reports.filter(
     (report) => filter === "All" || report.status === filter
   );
 
-  const getTabClass = (name) => {
-    return filter === name
-      ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
-      : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50";
-  };
-
   return (
-    <div className="flex flex-col items-center w-full min-h-screen bg-[#f5f3ff]">
+    <div className="flex flex-col items-center w-full min-h-screen bg-[#f5f3ff] relative">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -68,21 +69,19 @@ export default function MyReports() {
       <main className="p-6 w-full max-w-md space-y-6">
         {/* Filter Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-          {["All", "pending", "Resolved"].map(
-            (
-              tab // Note: lowercase 'pending' to match your model
-            ) => (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab)}
-                className={`${getTabClass(
-                  tab
-                )} px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all`}
-              >
-                {tab}
-              </button>
-            )
-          )}
+          {["All", "pending", "Resolved"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={`${
+                filter === tab
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-500"
+              } px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
         {/* Reports List */}
@@ -96,28 +95,27 @@ export default function MyReports() {
           ) : (
             filteredReports.map((report) => (
               <div
-                key={report._id} // MongoDB uses _id
+                key={report._id}
                 className="report-card p-6 rounded-[2.5rem] flex flex-col"
               >
-                {/* Image Preview */}
+                {/* Image Preview - FIXED PATH */}
                 <div className="aspect-video rounded-3xl overflow-hidden mb-6 border border-slate-100 bg-slate-100">
                   <img
-                    src={`http://localhost:3000/uploads/${report.imageBefore}`}
+                    src={getFullUrl(report.imageBefore || report.image)}
                     className="w-full h-full object-cover"
                     alt="report preview"
+                    onError={(e) =>
+                      (e.target.src =
+                        "https://via.placeholder.com/600x400?text=Image+Not+Found")
+                    }
                   />
                 </div>
 
-                {/* Title and ID Section */}
                 <div className="mb-4">
-                  <h3 className="text-xl font-extrabold text-slate-800 tracking-tight leading-tight">
+                  <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
                     {report.subject}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <p className="text-purple-600 text-[10px] font-black uppercase tracking-widest">
-                      Location: {report.address}
-                    </p>
-                    <span className="text-slate-300 text-[10px]">•</span>
                     <span
                       className={`text-[10px] font-black uppercase tracking-widest ${
                         report.status === "Resolved"
@@ -130,44 +128,16 @@ export default function MyReports() {
                   </div>
                 </div>
 
-                {/* Description Box */}
-                <div className="space-y-4 mb-8">
-                  <div
-                    className={`p-4 rounded-2xl border ${
-                      report.status === "Resolved"
-                        ? "bg-emerald-50/30 border-emerald-100/50"
-                        : "bg-slate-50 border-slate-100"
-                    }`}
-                  >
-                    <p className="text-[9px] font-black uppercase tracking-widest mb-1 text-slate-400">
-                      Report Description
-                    </p>
-                    <p className="text-xs text-slate-600 font-semibold leading-relaxed italic">
-                      "{report.description}"
-                    </p>
-                  </div>
-
-                  {/* Meta Info */}
-                  <div className="flex justify-between items-center px-1">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase">
-                        Reported At
-                      </p>
-                      <p className="text-xs font-bold text-slate-800">
-                        {new Date(report.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
                 <div className="mt-auto pt-6 border-t border-slate-50 flex gap-3">
-                  <button className="flex-grow flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-95">
+                  <button
+                    onClick={() => setSelectedReport(report)}
+                    className="flex-grow flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase transition-all active:scale-95"
+                  >
                     View Full Detail
                   </button>
                   <button
                     onClick={() => handleDelete(report._id)}
-                    className="w-12 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-100 active:scale-95"
+                    className="w-12 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -190,6 +160,101 @@ export default function MyReports() {
           )}
         </div>
       </main>
+
+      {/* --- DETAIL POPUP (MODAL) --- */}
+      {selectedReport && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setSelectedReport(null)}
+          ></div>
+
+          {/* Modal Content */}
+          <div className="relative bg-white w-full max-w-md rounded-[3rem] overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-10 duration-300">
+            <button
+              onClick={() => setSelectedReport(null)}
+              className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-all"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="p-8">
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                    selectedReport.status === "Resolved"
+                      ? "bg-emerald-100 text-emerald-600"
+                      : "bg-amber-100 text-amber-600"
+                  }`}
+                >
+                  {selectedReport.status}
+                </span>
+              </div>
+
+              <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-6">
+                {selectedReport.subject}
+              </h2>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 p-2 bg-purple-100 text-purple-600 rounded-lg">
+                    <MapPin size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Address
+                    </p>
+                    <p className="text-sm font-bold text-slate-700">
+                      {selectedReport.address}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 p-2 bg-blue-100 text-blue-600 rounded-lg">
+                    <Clock size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Reported On
+                    </p>
+                    <p className="text-sm font-bold text-slate-700">
+                      {new Date(selectedReport.createdAt).toLocaleDateString(
+                        undefined,
+                        { dateStyle: "long" }
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 p-2 bg-slate-100 text-slate-600 rounded-lg">
+                    <Info size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Full Description
+                    </p>
+                    <p className="text-sm text-slate-600 leading-relaxed italic">
+                      "
+                      {selectedReport.description || "No description provided."}
+                      "
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedReport(null)}
+                className="w-full mt-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:bg-slate-800 transition-all"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

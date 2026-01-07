@@ -5,21 +5,22 @@ const Fix = require("../models/fix.model"); // Import the new model
 
 // Helper function to handle Base64 to Local File conversion
 const saveBase64Image = (base64Str, prefix) => {
-    if (!base64Str || !base64Str.includes('base64,')) return base64Str; // Return as is if not base64
+    if (!base64Str || !base64Str.includes('base64,')) return base64Str;
 
     try {
         const base64Data = base64Str.split(';base64,').pop();
-        const fileName = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}.png`;
+        const fileName = `${prefix}_${Date.now()}.png`;
         const filePath = path.join(__dirname, '../uploads', fileName);
 
         fs.writeFileSync(filePath, base64Data, { encoding: 'base64' });
-        return fileName; // Only save the filename in DB
+        
+        // UNIVERSAL FIX: Save the folder path so the frontend knows where it is
+        return `/uploads/${fileName}`; 
     } catch (error) {
         console.error("File save error:", error);
         return null;
     }
 };
-
 // 1. Get All Reports
 const getReports = async (req, res) => {
     try {
@@ -85,7 +86,6 @@ const assignStaff = async (req, res) => {
 // 5. NEW: Submit Fix (Uses Fix Model)
 const submitFix = async (req, res) => {
     try {
-        // Destructure report_id from the staff's submission
         const { report_id, subject, location, notes, imageBefore, imageAfter } = req.body;
 
         // 1. SAVE THE FIX RECORD
@@ -96,29 +96,22 @@ const submitFix = async (req, res) => {
             notes,
             imageBefore: saveBase64Image(imageBefore, 'before'),
             imageAfter: saveBase64Image(imageAfter, 'after'),
-            status: "Fixed"
+            status: "Resolved" // Match your "Processed" column filter
         });
 
-        // 2. UPDATE THE ORIGINAL REPORT STATUS DIRECTLY
-        // This is the line that finds 'car broken 222' by its ID and changes it to 'Fixed'
+        // 2. UPDATE THE ORIGINAL REPORT 
         const updatedReport = await Report.findByIdAndUpdate(
             report_id, 
-            { status: "Fixed" },
-            { new: true } // Returns the updated document to confirm it worked
+            { status: "Resolved" }, // Changed from "Fixed" to "Resolved"
+            { new: true }
         );
 
         if (!updatedReport) {
-            return res.status(404).json({ message: "Original report not found. Status not updated." });
+            return res.status(404).json({ message: "Original report not found." });
         }
 
-        res.status(200).json({ 
-            success: true, 
-            message: "Success! Fix saved and Report status changed to Fixed.",
-            updatedReport
-        });
-
+        res.status(200).json({ success: true, updatedReport });
     } catch (error) {
-        console.error("Submit Fix Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -132,12 +125,45 @@ const deleteReport = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+const updateReport = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
 
+    // This uses the 'Product' model imported above
+    const updatedReport = await Report.findByIdAndUpdate(
+      id,
+      { status: status }, 
+      { new: true }
+    );
+
+    if (!updatedReport) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    res.status(200).json(updatedReport);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// In your Fix Controller
+ const getFixByReportId = async (req, res) => {
+  try {
+    // We search the Fix collection for a document where report_id matches the ID from params
+    const fix = await Fix.findOne({ report_id: req.params.id });
+    if (!fix) return res.status(404).json({ message: "No fix found for this report" });
+    res.status(200).json(fix);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 module.exports = {
     getReports,
     getReport,
     addReport,
     deleteReport,
     assignStaff,
-    submitFix // Export the new function
+    submitFix ,// Export the new function,
+    updateReport,
+    getFixByReportId
 };

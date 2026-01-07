@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Essential for navigation
+import { useNavigate } from "react-router-dom";
 
 const ActiveReports = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -7,7 +7,8 @@ const ActiveReports = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const navigate = useNavigate(); // Initialize the navigate hook
+  const navigate = useNavigate();
+  const SERVER_URL = "http://localhost:3000"; // Define base URL for images
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -15,11 +16,16 @@ const ActiveReports = () => {
   useEffect(() => {
     const fetchActiveReports = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/Reports");
+        const response = await fetch(`${SERVER_URL}/api/Reports`);
         const data = await response.json();
-        // Showing only non-resolved reports
-        const activeOnly = data.filter((r) => r.status !== "Resolved");
-        setReports(activeOnly);
+
+        // --- UPDATED LOGIC: Fetch ONLY those whose status is 'pending' ---
+        // Note: I used lowercase 'pending' to match your controller's addReport logic
+        const pendingOnly = data.filter(
+          (r) => r.status?.toLowerCase() === "pending"
+        );
+
+        setReports(pendingOnly);
         setLoading(false);
       } catch (error) {
         console.error("Fetch error:", error);
@@ -32,7 +38,7 @@ const ActiveReports = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Delete this report permanently?")) {
       try {
-        await fetch(`http://localhost:3000/api/Report/${id}`, {
+        await fetch(`${SERVER_URL}/api/Report/${id}`, {
           method: "DELETE",
         });
         setReports(reports.filter((r) => r._id !== id));
@@ -62,6 +68,8 @@ const ActiveReports = () => {
             transform: translateY(-4px); 
             box-shadow: 0 20px 25px -5px rgba(124, 58, 237, 0.1); 
         }
+        .card-img-container { width: 100%; height: 160px; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1.5rem; background: #f3f4f6; }
+        .card-img { width: 100%; height: 100%; object-fit: cover; }
       `}</style>
 
       {/* Navigation */}
@@ -100,7 +108,7 @@ const ActiveReports = () => {
         </button>
       </nav>
 
-      {/* Side Menu Drawer */}
+      {/* Side Menu Drawer (Kept Same) */}
       <div className={`fixed inset-0 z-[60] ${isMenuOpen ? "" : "invisible"}`}>
         <div
           onClick={toggleMenu}
@@ -121,54 +129,34 @@ const ActiveReports = () => {
               onClick={toggleMenu}
               className="text-purple-400 hover:text-purple-600"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              ✕
             </button>
           </div>
-          <div className="space-y-8 flex-grow">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400 mb-4 ml-2">
-                Dashboard
-              </p>
-              <div className="space-y-1">
-                <button
-                  onClick={() => navigate("/admin")}
-                  className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-                >
-                  Main Overview
-                </button>
-                <button
-                  onClick={() => navigate("/admin/active-reports")}
-                  className="w-full text-left flex items-center gap-3 p-4 bg-purple-50 text-purple-700 rounded-2xl font-bold text-sm"
-                >
-                  Active Reports
-                </button>
-                <button
-                  onClick={() => navigate("/admin/processed-reports")}
-                  className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-                >
-                  Processed Reports
-                </button>
-                <button
-                  onClick={() => navigate("/admin/fixed-reports")}
-                  className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-                >
-                  Fixed Reports
-                </button>
-              </div>
-            </div>
+          <div className="space-y-1">
+            <button
+              onClick={() => navigate("/admin")}
+              className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
+            >
+              Main Overview
+            </button>
+            <button
+              onClick={() => navigate("/admin/active-reports")}
+              className="w-full text-left flex items-center gap-3 p-4 bg-purple-50 text-purple-700 rounded-2xl font-bold text-sm"
+            >
+              Active Reports
+            </button>
+            <button
+              onClick={() => navigate("/admin/processed-reports")}
+              className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
+            >
+              Processed Reports
+            </button>
+            <button
+              onClick={() => navigate("/admin/fixed-reports")}
+              className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
+            >
+              Fixed Reports
+            </button>
           </div>
         </div>
       </div>
@@ -183,7 +171,7 @@ const ActiveReports = () => {
             <p className="text-purple-500 text-sm font-bold uppercase tracking-widest mt-1">
               {loading
                 ? "Syncing..."
-                : `${filteredReports.length} Issues Pending`}
+                : `${filteredReports.length} New Requests`}
             </p>
           </div>
           <div className="relative">
@@ -207,36 +195,55 @@ const ActiveReports = () => {
               {filteredReports.map((report) => (
                 <div
                   key={report._id}
-                  className="report-card p-8 rounded-[2.5rem] flex flex-col"
+                  className="report-card p-6 rounded-[2.5rem] flex flex-col"
                 >
-                  <div className="flex justify-between items-start mb-6">
-                    <span className="px-3 py-1 bg-amber-100 text-amber-600 text-[10px] font-black rounded-lg uppercase">
+                  {/* IMAGE ADDED HERE */}
+                  <div className="card-img-container">
+                    <img
+                      src={
+                        report.imageBefore
+                          ? `${SERVER_URL}${report.imageBefore}`
+                          : "https://via.placeholder.com/400x200?text=No+Preview"
+                      }
+                      alt="Trash"
+                      className="card-img"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://via.placeholder.com/400x200?text=Image+Not+Found";
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="px-3 py-1 bg-red-100 text-red-600 text-[10px] font-black rounded-lg uppercase">
                       {report.status}
                     </span>
                     <p className="text-[10px] font-black text-slate-400">
                       ID: {report._id.slice(-6)}
                     </p>
                   </div>
-                  <div className="mb-6">
-                    <h3 className="text-xl font-extrabold text-slate-800 leading-tight">
+
+                  <div className="mb-4">
+                    <h3 className="text-lg font-extrabold text-slate-800 leading-tight truncate">
                       {report.subject}
                     </h3>
-                    <p className="text-purple-600 text-xs font-bold mt-1 uppercase tracking-widest">
+                    <p className="text-purple-600 text-[10px] font-bold mt-1 uppercase tracking-widest truncate">
                       {report.address}
                     </p>
                   </div>
-                  <div className="bg-purple-50/50 p-4 rounded-2xl mb-8">
-                    <p className="text-xs text-slate-600 font-medium italic">
+
+                  <div className="bg-purple-50/50 p-4 rounded-2xl mb-6 flex-grow">
+                    <p className="text-xs text-slate-600 font-medium italic line-clamp-2">
                       "{report.description}"
                     </p>
                   </div>
-                  <div className="mt-auto pt-6 border-t border-purple-50 flex gap-3">
-                    {/* FIXED: Removed the colon from navigate string */}
+
+                  <div className="mt-auto pt-4 border-t border-purple-50 flex gap-3">
                     <button
                       onClick={() => navigate(`/admin/report/${report._id}`)}
                       className="flex-grow flex items-center justify-center py-3 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all"
                     >
-                      View Detail
+                      Assign Staff
                     </button>
                     <button
                       onClick={() => handleDelete(report._id)}

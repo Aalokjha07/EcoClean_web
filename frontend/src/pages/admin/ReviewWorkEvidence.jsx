@@ -1,279 +1,268 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
-  CheckCircle,
-  MapPin,
-  User,
-  AlertTriangle,
   Loader2,
-  X,
-  Maximize2,
+  MapPin,
+  CheckCircle,
+  XCircle,
+  ArrowLeft,
+  User,
+  HardHat,
+  Eye,
 } from "lucide-react";
 
 const ReviewWorkEvidence = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const [report, setReport] = useState(null);
-  const [fixDetails, setFixDetails] = useState(null);
+  const [data, setData] = useState({ report: null, fix: null });
   const [loading, setLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedImg, setSelectedImg] = useState(null);
 
-  const IMAGE_BASE_URL = "http://localhost:3000/uploads/";
+  const SERVER_URL = "http://localhost:3000";
 
   useEffect(() => {
-    const fetchFullData = async () => {
+    const fetchCombinedData = async () => {
       try {
-        const reportRes = await fetch(
-          `http://localhost:3000/api/Reports/${id}`
-        );
-        const reportData = await reportRes.json();
-        setReport(reportData);
+        const repRes = await fetch(`${SERVER_URL}/api/Reports/${id}`);
+        const report = await repRes.json();
 
-        const fixRes = await fetch(
-          `http://localhost:3000/api/Report/fixes/submit`
-        );
-        const allFixes = await fixRes.json();
-        const specificFix = allFixes.find((f) => f.report_id === id);
-        setFixDetails(specificFix);
+        const fixRes = await fetch(`${SERVER_URL}/api/Fixes/report/${id}`);
+        const fix = fixRes.ok ? await fixRes.json() : null;
+
+        setData({ report, fix });
+        setLoading(false);
       } catch (error) {
         console.error("Fetch Error:", error);
-      } finally {
         setLoading(false);
       }
     };
-    if (id) fetchFullData();
+    fetchCombinedData();
   }, [id]);
 
-  /**
-   * CORRECTED IMAGE FETCHER
-   */
-  const getImageUrl = (imagePath) => {
-    if (!imagePath)
-      return "https://via.placeholder.com/600x400?text=No+Path+Found";
-
-    // 1. If it's a blob URL, it's broken data from the past.
-    // We try to see if there is a filename at the end of it or just show a warning.
-    if (imagePath.startsWith("blob:")) {
-      console.error(
-        "DATA ERROR: Database contains a temporary Blob URL instead of a filename:",
-        imagePath
-      );
-      return "https://via.placeholder.com/600x400?text=Broken+Blob+Data";
+  const getFullUrl = (path) => {
+    if (!path || path === "undefined" || path === null) {
+      return "https://via.placeholder.com/600x400?text=No+Image+Path";
     }
 
-    // 2. If it's already a full HTTP path, use it
-    if (imagePath.startsWith("http")) return imagePath;
+    // Handle temporary blob URLs or full external links
+    if (path.startsWith("blob:") || path.startsWith("http")) {
+      return path;
+    }
 
-    // 3. Standard local fetch: Clean "uploads/" prefix and append to base URL
-    const cleanPath = imagePath.replace(/^uploads\//, "");
-    const finalUrl = `${IMAGE_BASE_URL}${cleanPath}`;
-
-    return finalUrl;
+    // Handle stored filenames from your server
+    const cleanPath = path.replace(/^\/+/, "");
+    // If your backend serves from an /uploads folder, keep it here.
+    // If not, use `${SERVER_URL}/${cleanPath}`
+    return `${SERVER_URL}/uploads/${cleanPath}`;
   };
 
-  const handleAction = async (type) => {
-    setIsProcessing(true);
-    const newStatus = type === "validate" ? "Validated" : "Assigned";
-    const staffStatus = type === "validate" ? "Validated" : "Pending";
-
+  const handleUpdateStatus = async (newStatus) => {
     try {
-      await fetch(`http://localhost:3000/api/Reports/${id}`, {
+      const response = await fetch(`${SERVER_URL}/api/Reports/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (fixDetails?._id) {
-        await fetch(
-          `http://localhost:3000/api/Report/fixes/${fixDetails._id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: staffStatus }),
-          }
-        );
+      if (response.ok) {
+        alert(`Verification Complete: ${newStatus.toUpperCase()}`);
+        navigate("/admin/processed-reports");
       }
-
-      alert(
-        `Report ${type === "validate" ? "Validated" : "Rejected"} successfully!`
-      );
-      navigate("/admin/processed-reports");
     } catch (error) {
-      alert("Error updating status");
-    } finally {
-      setIsProcessing(false);
+      alert("Database update failed.");
     }
   };
 
   if (loading)
     return (
-      <div className="h-screen flex items-center justify-center bg-[#f5f3ff]">
+      <div className="h-screen flex items-center justify-center bg-[#f8fafc]">
         <Loader2 className="animate-spin text-purple-600" size={40} />
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-[#f5f3ff] pb-20 font-['Plus_Jakarta_Sans']">
-      {/* IMAGE MODAL */}
-      {selectedImg && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-10">
-          <button
-            onClick={() => setSelectedImg(null)}
-            className="absolute top-10 right-10 text-white hover:rotate-90 transition-all"
-          >
-            <X size={40} />
-          </button>
-          <img
-            src={selectedImg}
-            className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain"
-            alt="Enlarged"
-          />
-        </div>
-      )}
-
-      <nav className="bg-white/80 backdrop-blur-md border-b border-purple-100 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-10 font-['Plus_Jakarta_Sans']">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto flex items-center justify-between mb-10">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-600 font-bold hover:text-purple-600 transition-colors"
+          className="flex items-center gap-2 text-slate-500 hover:text-purple-600 font-bold transition-all"
         >
-          <ArrowLeft size={20} /> Back to Reports
+          <ArrowLeft size={20} /> Back
         </button>
-        <div className="text-right">
-          <span className="text-[10px] font-black text-purple-600 uppercase tracking-widest">
-            Reviewing Case
-          </span>
-          <p className="text-sm font-black text-slate-900">
-            #{id?.slice(-8).toUpperCase()}
+        <div className="text-center">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Audit Evidence
+          </h1>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+            Reviewing Database Records
           </p>
         </div>
-      </nav>
+        <div className="w-24"></div>
+      </div>
 
-      <main className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        {/* SECTION 1: USER EVIDENCE */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="text-orange-600" size={18} />
-            <h2 className="text-xl font-black text-slate-900">User Evidence</h2>
-          </div>
-          <div className="group relative bg-white rounded-[2.5rem] p-8 shadow-xl border border-purple-50">
-            <div
-              onClick={() => setSelectedImg(getImageUrl(report?.imageBefore))}
-              className="relative aspect-video rounded-3xl overflow-hidden bg-slate-100 mb-6 border border-slate-100 cursor-zoom-in"
-            >
-              <img
-                src={getImageUrl(report?.imageBefore)}
-                alt="User Report"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                onError={(e) => {
-                  e.target.src =
-                    "https://via.placeholder.com/600x400?text=File+Not+Found+On+Server";
-                }}
-              />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <Maximize2 className="text-white" />
-              </div>
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        {/* --- LEFT SIDE: CITIZEN DATA --- */}
+        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-slate-100 flex flex-col">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+              <User size={24} />
             </div>
-            <h3 className="text-2xl font-extrabold text-slate-900 leading-tight">
-              {report?.subject}
-            </h3>
-            <p className="flex items-center gap-1 text-slate-400 text-sm font-bold mt-2">
-              <MapPin size={14} /> {report?.address}
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION 2: STAFF RESOLUTION */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="text-green-600" size={18} />
-            <h2 className="text-xl font-black text-slate-900">
-              Staff Resolution
+            <h2 className="text-xl font-extrabold text-slate-800 uppercase tracking-tighter">
+              Citizen Entry
             </h2>
           </div>
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-purple-50">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div
-                onClick={() =>
-                  setSelectedImg(getImageUrl(fixDetails?.imageBefore))
-                }
-                className="relative aspect-square rounded-3xl overflow-hidden bg-slate-100 border border-slate-100 cursor-zoom-in"
-              >
-                <img
-                  src={getImageUrl(fixDetails?.imageBefore)}
-                  className="w-full h-full object-cover"
-                  alt="Before"
-                />
-                <span className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-md text-white text-[9px] px-2 py-1 rounded-lg font-black uppercase">
-                  Before
-                </span>
-              </div>
-              <div
-                onClick={() =>
-                  setSelectedImg(getImageUrl(fixDetails?.imageAfter))
-                }
-                className="relative aspect-square rounded-3xl overflow-hidden bg-slate-100 border border-slate-100 cursor-zoom-in"
-              >
-                <img
-                  src={getImageUrl(fixDetails?.imageAfter)}
-                  className="w-full h-full object-cover"
-                  alt="After"
-                />
-                <span className="absolute bottom-3 left-3 bg-green-600 text-white text-[9px] px-2 py-1 rounded-lg font-black uppercase">
-                  After
-                </span>
+
+          <div className="space-y-6 flex-grow">
+            <DetailItem label="Report Title" value={data.report?.subject} />
+            <DetailItem
+              label="Location"
+              value={
+                data.report?.address ||
+                `Lat: ${data.report?.location?.lat}, Lng: ${data.report?.location?.lng}`
+              }
+              isLocation
+            />
+
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                Original Description
+              </label>
+              <div className="bg-slate-50 p-6 rounded-[2rem] text-slate-600 leading-relaxed italic border border-slate-100">
+                "{data.report?.description || "No description provided."}"
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
-                    <User size={18} />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase">
-                      Field Agent
-                    </p>
-                    <p className="text-sm font-bold text-slate-900">
-                      {report?.assignedStaff || "Staff Member"}
-                    </p>
-                  </div>
-                </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                Initial Evidence
+              </label>
+              <img
+                src={getFullUrl(data.report?.imageBefore || data.report?.image)}
+                className="w-full h-80 object-cover rounded-[2.5rem] shadow-lg border-4 border-white bg-slate-100"
+                alt="Citizen Evidence"
+                onError={(e) =>
+                  (e.target.src =
+                    "https://via.placeholder.com/600x400?text=Initial+Evidence+Missing")
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* --- RIGHT SIDE: STAFF DATA --- */}
+        <div className="bg-slate-900 rounded-[3rem] p-8 shadow-xl text-white flex flex-col">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-green-500/20 text-green-400 rounded-2xl flex items-center justify-center">
+              <HardHat size={24} />
+            </div>
+            <h2 className="text-xl font-extrabold uppercase tracking-tighter">
+              Staff Submission
+            </h2>
+          </div>
+
+          <div className="space-y-6 flex-grow">
+            <DetailItem
+              label="Completion Status"
+              value={data.fix ? "RESOLVED" : "PENDING"}
+              isDark
+            />
+            <DetailItem
+              label="Verified Location"
+              value={data.fix?.location || data.report?.address}
+              isLocation
+              isDark
+            />
+
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                Staff Remarks
+              </label>
+              <div className="bg-white/5 p-6 rounded-[2rem] text-slate-300 leading-relaxed border border-white/5">
+                {data.fix?.notes || "No closing remarks provided."}
               </div>
-              <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
-                <p className="text-[10px] font-black text-purple-400 uppercase mb-1">
-                  Notes
-                </p>
-                <p className="text-sm text-slate-700 font-medium italic">
-                  "{fixDetails?.notes || "No notes."}"
-                </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 flex items-center gap-1">
+                  <Eye size={12} /> Work Reference
+                </label>
+                <img
+                  src={getFullUrl(
+                    data.fix?.imageBefore || data.report?.imageBefore
+                  )}
+                  className="w-full h-56 object-cover rounded-[1.5rem] opacity-40 border border-white/10 bg-slate-800"
+                  alt="Staff Reference"
+                />
+              </div>
+              {/* FIXED: Added Final Resolution Image here */}
+              <div>
+                <label className="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2 flex items-center gap-1">
+                  Final Resolution
+                </label>
+                <img
+                  src={getFullUrl(data.fix?.imageAfter || data.fix?.image)}
+                  className="w-full h-56 object-cover rounded-[1.5rem] border-2 border-green-500 shadow-xl shadow-green-500/20 bg-slate-800"
+                  alt="Final Resolution"
+                  onError={(e) =>
+                    (e.target.src =
+                      "https://via.placeholder.com/600x400?text=Staff+Evidence+Missing")
+                  }
+                />
               </div>
             </div>
           </div>
-        </section>
-      </main>
-
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-purple-100 p-6 z-50">
-        <div className="max-w-4xl mx-auto flex gap-4">
-          <button
-            onClick={() => handleAction("reject")}
-            className="flex-1 py-4 bg-red-50 text-red-600 rounded-2xl font-black uppercase text-xs hover:bg-red-100"
-          >
-            {isProcessing ? "..." : "REJECT"}
-          </button>
-          <button
-            onClick={() => handleAction("validate")}
-            className="flex-[2] py-4 bg-purple-600 text-white rounded-2xl font-black uppercase text-xs hover:bg-purple-700 shadow-lg"
-          >
-            {isProcessing ? "..." : "VALIDATE"}
-          </button>
         </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+        <button
+          onClick={() => handleUpdateStatus("validated")}
+          className="group flex items-center justify-center gap-3 py-6 bg-green-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-green-500/20 hover:bg-green-600 transition-all"
+        >
+          <CheckCircle size={24} /> Approve Work
+        </button>
+        <button
+          onClick={() => handleUpdateStatus("pending")}
+          className="group flex items-center justify-center gap-3 py-6 bg-white border-2 border-red-100 text-red-500 rounded-[2rem] font-black uppercase tracking-widest text-sm hover:bg-red-50 transition-all"
+        >
+          <XCircle size={24} /> Reject & Reopen
+        </button>
       </div>
     </div>
   );
 };
+
+const DetailItem = ({ label, value, isLocation, isDark }) => (
+  <div>
+    <label
+      className={`text-[10px] font-black uppercase tracking-widest block mb-1 ${
+        isDark ? "text-slate-500" : "text-slate-400"
+      }`}
+    >
+      {label}
+    </label>
+    <div
+      className={`flex items-center gap-2 ${
+        isDark ? "text-white" : "text-slate-800"
+      }`}
+    >
+      {isLocation && (
+        <MapPin
+          size={16}
+          className={isDark ? "text-green-400" : "text-purple-600"}
+        />
+      )}
+      <p
+        className={`text-lg font-bold ${
+          value === "RESOLVED" ? "text-green-400" : ""
+        }`}
+      >
+        {value || "Not Recorded"}
+      </p>
+    </div>
+  </div>
+);
 
 export default ReviewWorkEvidence;

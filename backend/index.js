@@ -12,8 +12,8 @@ const app = express();
 // 1. GLOBAL SETTINGS & LIMITS (Must be at the very top)
 app.use(cors()); 
 // Combine into one line with the 50mb limit
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
 // 2. STATIC FILES
 // Serve the uploads folder so frontend can see saved images

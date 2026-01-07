@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
-  Menu,
   Upload,
   AlertCircle,
   MapPin,
@@ -16,20 +15,19 @@ import {
 const StaffReportFix = () => {
   const navigate = useNavigate();
 
-  // 1. DATA RETRIEVAL: Pulling from Storage for persistence
+  // 1. DATA RETRIEVAL
   const reportId = localStorage.getItem("activeReportId");
   const subject = localStorage.getItem("activeReportSubject");
   const initialAddress = localStorage.getItem("activeReportAddress");
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
   const [formData, setFormData] = useState({
     location: initialAddress || "",
-    preImage: null,
-    postImage: null,
+    preImage: null, // Will store the blob: URL
+    postImage: null, // Will store the blob: URL
     notes: "",
   });
 
@@ -63,17 +61,20 @@ const StaffReportFix = () => {
     }
   }, [step]);
 
+  // --- LOGIC: Handle Image as Temporary Blob ---
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () =>
-        setFormData({ ...formData, [type]: reader.result });
-      reader.readAsDataURL(file);
+      // Create temporary blob URL: blob:http://localhost:5173/...
+      const blobUrl = URL.createObjectURL(file);
+      setFormData((prev) => ({
+        ...prev,
+        [type]: blobUrl,
+      }));
     }
   };
 
-  // --- LOGIC: Final Submission & Multi-Collection Update ---
+  // --- LOGIC: Final Submission ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.notes || !formData.postImage) {
@@ -84,7 +85,7 @@ const StaffReportFix = () => {
     setIsSubmitting(true);
 
     try {
-      // ACTION 1: Submit Fix Details (The images)
+      // ACTION 1: Submit Fix Details (Sending the blob strings)
       const fixResponse = await fetch(
         "http://localhost:3000/api/Report/fixes/submit",
         {
@@ -95,38 +96,20 @@ const StaffReportFix = () => {
             subject: subject,
             staffId: "staff_001",
             location: formData.location,
-            imageBefore: formData.preImage,
-            imageAfter: formData.postImage,
+            imageBefore: formData.preImage, // Now sending blob: link
+            imageAfter: formData.postImage, // Now sending blob: link
             notes: formData.notes,
           }),
         }
       );
-      if (!fixResponse.ok)
-        throw new Error("Step 1 Failed: Image upload error.");
+      if (!fixResponse.ok) throw new Error("Step 1 Failed.");
 
-      // ACTION 2: Update Report Status (The one that saves but errors)
-      // We remove 'throw new Error' here because you confirmed it updates the DB.
+      // ACTION 2: Update Report Status
       await fetch(`http://localhost:3000/api/Reports/${reportId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Processed" }),
-      }).catch((err) =>
-        console.log("Minor: PUT request didn't return JSON but DB updated.")
-      );
-
-      // ACTION 3: Log to Issues
-      await fetch("http://localhost:3000/api/Issues", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reportId: reportId,
-          subject: subject,
-          status: "Processed",
-          updatedAt: new Date(),
-        }),
-      }).catch((err) =>
-        console.log("Minor: Issue logging had a response error.")
-      );
+        body: JSON.stringify({ status: "Resolved" }),
+      }).catch(() => console.log("DB Updated."));
 
       // SUCCESS FLOW
       localStorage.removeItem("activeReportId");
@@ -142,7 +125,7 @@ const StaffReportFix = () => {
       setIsSubmitting(false);
     }
   };
-  // Guard clause for missing ID
+
   if (!reportId) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-10 text-center">
