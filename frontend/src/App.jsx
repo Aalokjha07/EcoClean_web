@@ -22,6 +22,7 @@ import ActiveReports from "./pages/admin/ActiveReports";
 import ProcessedReports from "./pages/admin/ProcessedReports";
 import FixedReports from "./pages/admin/FixedReports";
 import ReportDetailAdmin from "./pages/admin/ReportDetail";
+import ReviewWorkEvidence from "./pages/admin/ReviewWorkEvidence";
 
 export default function App() {
   return (
@@ -53,6 +54,10 @@ export default function App() {
           />
           <Route path="/admin/fixed-reports" element={<FixedReports />} />
           <Route path="/admin/report/:id" element={<ReportDetailAdmin />} />
+          <Route
+            path="/staff/review-work/:id"
+            element={<ReviewWorkEvidence />}
+          />
         </Routes>
       </div>
     </Router>

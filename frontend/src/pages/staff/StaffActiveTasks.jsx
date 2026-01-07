@@ -28,7 +28,6 @@ const StaffActiveTasks = () => {
     const fetchAssignedTasks = async () => {
       try {
         setLoading(true);
-        // Using the same endpoint as your ActiveReports component
         const response = await fetch("http://localhost:3000/api/Reports");
         const data = await response.json();
 
@@ -52,6 +51,18 @@ const StaffActiveTasks = () => {
     };
     fetchAssignedTasks();
   }, []);
+
+  // --- NEW LOGIC: PERSISTENT PROCESS START ---
+  const handleStartProcess = (task) => {
+    // We save the specific report details to localStorage
+    // This acts as the "source of truth" for the next page
+    localStorage.setItem("activeReportId", task._id);
+    localStorage.setItem("activeReportSubject", task.subject);
+    localStorage.setItem("activeReportAddress", task.address);
+
+    // Navigate to the fix page without needing to pass state manually
+    navigate("/staff/report-fix");
+  };
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -116,34 +127,7 @@ const StaffActiveTasks = () => {
                 </Link>
               </div>
             </div>
-
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 ml-2">
-                Management
-              </p>
-              <div className="space-y-1">
-                <Link
-                  to="/staff/analytics"
-                  className="flex items-center gap-3 p-3 text-slate-600 hover:bg-slate-50 rounded-2xl font-bold text-sm transition-colors"
-                >
-                  <Layers size={18} /> Analytics
-                </Link>
-                <Link
-                  to="/staff/settings"
-                  className="flex items-center gap-3 p-3 text-slate-600 hover:bg-slate-50 rounded-2xl font-bold text-sm transition-colors"
-                >
-                  <Settings size={18} /> Staff Settings
-                </Link>
-                <Link
-                  to="/staff/support"
-                  className="flex items-center gap-3 p-3 text-slate-600 hover:bg-slate-50 rounded-2xl font-bold text-sm transition-colors"
-                >
-                  <LifeBuoy size={18} /> Support
-                </Link>
-              </div>
-            </div>
           </div>
-
           <button className="mt-auto border-t border-slate-100 pt-6 flex items-center gap-3 p-3 text-red-500 font-bold text-sm hover:bg-red-50 rounded-2xl transition-colors">
             <LogOut size={18} /> Logout System
           </button>
@@ -170,7 +154,7 @@ const StaffActiveTasks = () => {
           onClick={toggleMenu}
           className="p-2.5 bg-slate-900 text-white rounded-2xl shadow-lg hover:scale-105 transition-all"
         >
-          <Menu className={`h-5 w-5 ${isMenuOpen ? "rotate-90" : ""}`} />
+          <Menu className="h-5 w-5" />
         </button>
       </nav>
 
@@ -202,16 +186,12 @@ const StaffActiveTasks = () => {
             <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">
               {selectedTask.department}
             </p>
-            <div className="space-y-4 mb-8">
-              <p className="text-slate-600 text-sm">
-                {selectedTask.description}
-              </p>
-              <div className="flex items-center gap-2 text-slate-400 text-xs">
-                <MapPin size={14} /> <span>{selectedTask.address}</span>
-              </div>
+            <div className="space-y-4 mb-8 text-slate-600 text-sm">
+              {selectedTask.description}
             </div>
+
             <button
-              onClick={() => navigate(`/staff/report-fix/${selectedTask._id}`)}
+              onClick={() => handleStartProcess(selectedTask)} // Updated to use storage logic
               className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 transition-all"
             >
               Start Process
@@ -222,14 +202,14 @@ const StaffActiveTasks = () => {
 
       {/* --- Main Content --- */}
       <main className="p-6 w-full max-w-md space-y-10">
-        <div className="px-2">
+        <header className="px-2">
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">
             Active Tasks
           </h2>
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-2">
             Departmental Worklist
           </p>
-        </div>
+        </header>
 
         {loading ? (
           <div className="py-20 flex justify-center">
@@ -280,7 +260,7 @@ const StaffActiveTasks = () => {
                           Detail
                         </button>
                         <button
-                          onClick={() => navigate(`/staff/report-fix`)}
+                          onClick={() => handleStartProcess(task)} // Updated to use storage logic
                           className="flex-1 bg-slate-900 text-white py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest"
                         >
                           Process

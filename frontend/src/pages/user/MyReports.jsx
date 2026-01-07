@@ -102,10 +102,7 @@ export default function MyReports() {
                 {/* Image Preview */}
                 <div className="aspect-video rounded-3xl overflow-hidden mb-6 border border-slate-100 bg-slate-100">
                   <img
-                    src={
-                      report.imageBefore ||
-                      "https://via.placeholder.com/400x225?text=No+Image"
-                    }
+                    src={`http://localhost:3000/uploads/${report.imageBefore}`}
                     className="w-full h-full object-cover"
                     alt="report preview"
                   />

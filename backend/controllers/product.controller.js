@@ -1,6 +1,24 @@
-// Keep ONLY ONE of these. Choose the one that points to your actual Mongoose Schema.
-// If your file is named report.model.js, use the second one.
-const Report = require("../models/product.model"); 
+const fs = require('fs');
+const path = require('path');
+const Report = require("../models/product.model");
+const Fix = require("../models/fix.model"); // Import the new model
+
+// Helper function to handle Base64 to Local File conversion
+const saveBase64Image = (base64Str, prefix) => {
+    if (!base64Str || !base64Str.includes('base64,')) return base64Str; // Return as is if not base64
+
+    try {
+        const base64Data = base64Str.split(';base64,').pop();
+        const fileName = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}.png`;
+        const filePath = path.join(__dirname, '../uploads', fileName);
+
+        fs.writeFileSync(filePath, base64Data, { encoding: 'base64' });
+        return fileName; // Only save the filename in DB
+    } catch (error) {
+        console.error("File save error:", error);
+        return null;
+    }
+};
 
 // 1. Get All Reports
 const getReports = async (req, res) => {
@@ -12,21 +30,14 @@ const getReports = async (req, res) => {
     }
 };
 
-// 2. Get Single Report Detail (for ReportDetail page)
+// 2. Get Single Report Detail
 const getReport = async (req, res) => {
     try {
         const { id } = req.params;
-        
-        // Prevents server crash if the ID isn't exactly 24 characters
-        if (id.length !== 24) {
-            return res.status(400).json({ message: "Invalid Report ID format" });
-        }
+        if (id.length !== 24) return res.status(400).json({ message: "Invalid ID" });
 
         const report = await Report.findById(id);
-
-        if (!report) {
-            return res.status(404).json({ message: "Report not found in database" });
-        }
+        if (!report) return res.status(404).json({ message: "Report not found" });
 
         res.status(200).json(report);
     } catch (error) {
@@ -34,42 +45,26 @@ const getReport = async (req, res) => {
     }
 };
 
-// 3. Add New Report
+// 3. Add New Report (Updated with File logic)
 const addReport = async (req, res) => {
     try {
+        // Convert the user's uploaded image to a local file
+        const fileName = saveBase64Image(req.body.imageBefore, 'user_report');
+
         const reportData = {
-            subject: req.body.subject,        
-            description: req.body.description, 
-            address: req.body.address,         
-            imageBefore: req.body.imageBefore, 
-            userId: req.body.userId,           
-            status: "pending"                  
+            ...req.body,
+            imageBefore: fileName || "https://via.placeholder.com/150",
+            status: "pending"
         };
 
         const report = await Report.create(reportData);
-        res.status(201).json(report); 
+        res.status(201).json(report);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// 4. Delete Report
-const deleteReport = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const report = await Report.findByIdAndDelete(id);
-
-        if (!report) {
-            return res.status(404).json({ message: "Report not found" });
-        }
-
-        res.status(200).json({ message: "Report deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// 5. Assign Staff to Report
+// 4. Assign Staff to Report
 const assignStaff = async (req, res) => {
     try {
         const { id } = req.params;
@@ -77,17 +72,9 @@ const assignStaff = async (req, res) => {
 
         const updatedReport = await Report.findByIdAndUpdate(
             id,
-            { 
-                assignedStaff, 
-                department, 
-                status: "Assigned" 
-            },
+            { assignedStaff, department, status: "Assigned", assignedAt: new Date() },
             { new: true }
         );
-
-        if (!updatedReport) {
-            return res.status(404).json({ message: "Report not found" });
-        }
 
         res.status(200).json(updatedReport);
     } catch (error) {
@@ -95,11 +82,62 @@ const assignStaff = async (req, res) => {
     }
 };
 
+// 5. NEW: Submit Fix (Uses Fix Model)
+const submitFix = async (req, res) => {
+    try {
+        // Destructure report_id from the staff's submission
+        const { report_id, subject, location, notes, imageBefore, imageAfter } = req.body;
+
+        // 1. SAVE THE FIX RECORD
+        const newFix = await Fix.create({
+            report_id,
+            subject,
+            location,
+            notes,
+            imageBefore: saveBase64Image(imageBefore, 'before'),
+            imageAfter: saveBase64Image(imageAfter, 'after'),
+            status: "Fixed"
+        });
+
+        // 2. UPDATE THE ORIGINAL REPORT STATUS DIRECTLY
+        // This is the line that finds 'car broken 222' by its ID and changes it to 'Fixed'
+        const updatedReport = await Report.findByIdAndUpdate(
+            report_id, 
+            { status: "Fixed" },
+            { new: true } // Returns the updated document to confirm it worked
+        );
+
+        if (!updatedReport) {
+            return res.status(404).json({ message: "Original report not found. Status not updated." });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Success! Fix saved and Report status changed to Fixed.",
+            updatedReport
+        });
+
+    } catch (error) {
+        console.error("Submit Fix Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+// 6. Delete Report
+const deleteReport = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Report.findByIdAndDelete(id);
+        res.status(200).json({ message: "Deleted" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 module.exports = {
     getReports,
     getReport,
     addReport,
     deleteReport,
-    assignStaff
+    assignStaff,
+    submitFix // Export the new function
 };

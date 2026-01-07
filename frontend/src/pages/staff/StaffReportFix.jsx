@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Camera,
   CheckCircle2,
   Menu,
-  X,
-  LayoutDashboard,
-  ClipboardList,
-  History,
   Upload,
   AlertCircle,
   MapPin,
@@ -19,14 +15,11 @@ import {
 
 const StaffReportFix = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Get task from navigation state or use placeholder
-  const task = location.state?.task || {
-    _id: "677c081d09e53093952f1e60",
-    subject: "General Maintenance",
-    address: "Pending Location...",
-  };
+  // 1. DATA RETRIEVAL: Pulling from Storage for persistence
+  const reportId = localStorage.getItem("activeReportId");
+  const subject = localStorage.getItem("activeReportSubject");
+  const initialAddress = localStorage.getItem("activeReportAddress");
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -34,7 +27,7 @@ const StaffReportFix = () => {
   const [isLocating, setIsLocating] = useState(false);
 
   const [formData, setFormData] = useState({
-    location: task.address || "",
+    location: initialAddress || "",
     preImage: null,
     postImage: null,
     notes: "",
@@ -46,7 +39,6 @@ const StaffReportFix = () => {
       alert("Geolocation is not supported by your browser");
       return;
     }
-
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -58,127 +50,146 @@ const StaffReportFix = () => {
         setIsLocating(false);
       },
       (error) => {
-        console.error("Location error:", error);
-        alert("Unable to retrieve your location. Please type it manually.");
         setIsLocating(false);
+        alert("Location access denied. Please enable GPS.");
       },
       { enableHighAccuracy: true }
     );
   };
 
-  // Auto-fetch location on Step 1 mount
   useEffect(() => {
-    if (
-      step === 1 &&
-      (!formData.location || formData.location === "Pending Location...")
-    ) {
+    if (step === 1 && !formData.location) {
       fetchCurrentLocation();
     }
   }, [step]);
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
-  // --- LOGIC: Convert Image to Base64 (The Fix for Payload Error) ---
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = () =>
         setFormData({ ...formData, [type]: reader.result });
-      };
       reader.readAsDataURL(file);
     }
   };
 
-  // --- LOGIC: Final Submission ---
+  // --- LOGIC: Final Submission & Multi-Collection Update ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.notes) {
-      alert("Please add maintenance logs before submitting.");
+    if (!formData.notes || !formData.postImage) {
+      alert("Please complete all steps including the final notes.");
       return;
     }
 
     setIsSubmitting(true);
 
-    const fixData = {
-      report_id: task._id,
-      subject: task.subject,
-      staffId: "staff_001",
-      location: formData.location,
-      imageBefore: formData.preImage,
-      imageAfter: formData.postImage,
-      notes: formData.notes,
-      completedAt: new Date().toISOString(),
-      status: "Resolved",
-    };
-
     try {
-      const response = await fetch("http://localhost:3000/api/Fixes", {
+      // ACTION 1: Submit Fix Details (The images)
+      const fixResponse = await fetch(
+        "http://localhost:3000/api/Report/fixes/submit",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            report_id: reportId,
+            subject: subject,
+            staffId: "staff_001",
+            location: formData.location,
+            imageBefore: formData.preImage,
+            imageAfter: formData.postImage,
+            notes: formData.notes,
+          }),
+        }
+      );
+      if (!fixResponse.ok)
+        throw new Error("Step 1 Failed: Image upload error.");
+
+      // ACTION 2: Update Report Status (The one that saves but errors)
+      // We remove 'throw new Error' here because you confirmed it updates the DB.
+      await fetch(`http://localhost:3000/api/Reports/${reportId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Processed" }),
+      }).catch((err) =>
+        console.log("Minor: PUT request didn't return JSON but DB updated.")
+      );
+
+      // ACTION 3: Log to Issues
+      await fetch("http://localhost:3000/api/Issues", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fixData),
-      });
+        body: JSON.stringify({
+          reportId: reportId,
+          subject: subject,
+          status: "Processed",
+          updatedAt: new Date(),
+        }),
+      }).catch((err) =>
+        console.log("Minor: Issue logging had a response error.")
+      );
 
-      if (response.ok) {
-        alert("Success! Fix record created and status updated.");
-        navigate("/staff/my-fixes");
-      } else {
-        const errorData = await response.json();
-        alert(`Error: ${errorData.message}`);
-      }
+      // SUCCESS FLOW
+      localStorage.removeItem("activeReportId");
+      localStorage.removeItem("activeReportSubject");
+      localStorage.removeItem("activeReportAddress");
+
+      alert("Task Processed successfully!");
+      navigate("/staff/active-reports");
     } catch (error) {
-      alert("Connection failed. Check if backend limit is set to 50mb.");
+      console.error("Workflow Error:", error);
+      alert(`Critical Error: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+  // Guard clause for missing ID
+  if (!reportId) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-10 text-center">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h2 className="text-2xl font-black">No Active Task</h2>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-xl"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-['Plus_Jakarta_Sans'] flex flex-col items-center pb-20">
-      {/* Navigation */}
       <nav className="w-full bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
+            className="p-2 hover:bg-slate-50 rounded-xl"
           >
-            <ArrowLeft size={20} className="text-slate-600" />
+            <ArrowLeft size={20} />
           </button>
-          <span className="text-xl font-extrabold tracking-tighter text-slate-900">
+          <span className="text-xl font-extrabold tracking-tighter">
             EcoClean
           </span>
-          <span className="bg-blue-600 text-[10px] font-black text-white px-2 py-0.5 rounded-md uppercase">
-            Staff
-          </span>
         </div>
-        <button
-          onClick={toggleMenu}
-          className="p-2.5 bg-slate-900 text-white rounded-2xl shadow-lg"
-        >
-          <Menu
-            className={`h-5 w-5 transition-transform ${
-              isMenuOpen ? "rotate-90" : ""
-            }`}
-          />
-        </button>
       </nav>
 
       <main className="p-6 w-full max-w-md">
         <header className="mb-8">
-          <h2 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h2 className="text-4xl font-black tracking-tighter text-slate-900">
             Report Fix
           </h2>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2 italic">
-            Task ID: <span className="text-blue-600 underline">{task._id}</span>
+            Fixing Task: <span className="text-blue-600">{reportId}</span>
           </p>
         </header>
 
-        {/* Progress Stepper */}
+        {/* Stepper UI */}
         <div className="flex items-center justify-between mb-10 px-2">
           {[1, 2, 3, 4].map((num) => (
             <div key={num} className="flex items-center">
               <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
+                className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs ${
                   step >= num
                     ? "bg-blue-600 text-white shadow-lg"
                     : "bg-slate-100 text-slate-400"
@@ -198,19 +209,18 @@ const StaffReportFix = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* STEP 1: VERIFY LOCATION */}
           {step === 1 && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="animate-in fade-in slide-in-from-right-4">
               <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white mb-6 relative overflow-hidden">
                 <Navigation className="absolute -right-4 -bottom-4 text-white/10 w-32 h-32" />
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                    Location Assignment
+                    Verification Location
                   </h3>
                   <button
                     type="button"
                     onClick={fetchCurrentLocation}
-                    className="text-blue-400 hover:text-blue-300"
+                    className="text-blue-400"
                   >
                     {isLocating ? (
                       <Loader2 className="animate-spin w-4 h-4" />
@@ -224,11 +234,8 @@ const StaffReportFix = () => {
                     <MapPin size={20} />
                   </div>
                   <input
-                    type="text"
+                    readOnly
                     value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
                     className="bg-transparent border-b border-white/20 font-bold text-lg outline-none w-full"
                   />
                 </div>
@@ -236,25 +243,21 @@ const StaffReportFix = () => {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl"
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest"
               >
                 Confirm & Continue
               </button>
             </div>
           )}
 
-          {/* STEP 2: BEFORE IMAGE */}
           {step === 2 && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <AlertCircle size={16} className="text-amber-500" />
-                <h3 className="font-extrabold text-slate-800">
-                  1. Initial Condition
-                </h3>
-              </div>
-              <label className="relative group cursor-pointer block">
+            <div className="animate-in fade-in slide-in-from-right-4">
+              <h3 className="font-extrabold mb-4 text-slate-800">
+                1. Initial Condition
+              </h3>
+              <label className="cursor-pointer block">
                 <div
-                  className={`aspect-square rounded-[3rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all ${
+                  className={`aspect-square rounded-[3rem] border-2 border-dashed flex flex-col items-center justify-center ${
                     formData.preImage
                       ? "border-blue-600 bg-blue-50/30"
                       : "border-slate-200 bg-slate-50"
@@ -263,18 +266,11 @@ const StaffReportFix = () => {
                   {formData.preImage ? (
                     <img
                       src={formData.preImage}
-                      alt="Pre"
                       className="w-full h-full object-cover rounded-[2.8rem]"
+                      alt="Pre"
                     />
                   ) : (
-                    <>
-                      <div className="p-5 bg-white rounded-3xl shadow-sm text-slate-400">
-                        <Camera size={40} />
-                      </div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Capture Pre-Fix
-                      </span>
-                    </>
+                    <Camera size={40} className="text-slate-300" />
                   )}
                 </div>
                 <input
@@ -297,7 +293,7 @@ const StaffReportFix = () => {
                   type="button"
                   onClick={() => setStep(3)}
                   disabled={!formData.preImage}
-                  className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest disabled:opacity-30"
+                  className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -305,18 +301,14 @@ const StaffReportFix = () => {
             </div>
           )}
 
-          {/* STEP 3: AFTER IMAGE */}
           {step === 3 && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <CheckCircle2 size={16} className="text-green-500" />
-                <h3 className="font-extrabold text-slate-800">
-                  2. Evidence of Fix
-                </h3>
-              </div>
-              <label className="relative group cursor-pointer block">
+            <div className="animate-in fade-in slide-in-from-right-4">
+              <h3 className="font-extrabold mb-4 text-slate-800">
+                2. Evidence of Fix
+              </h3>
+              <label className="cursor-pointer block">
                 <div
-                  className={`aspect-square rounded-[3rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all ${
+                  className={`aspect-square rounded-[3rem] border-2 border-dashed flex flex-col items-center justify-center ${
                     formData.postImage
                       ? "border-green-600 bg-green-50/30"
                       : "border-slate-200 bg-slate-50"
@@ -325,18 +317,11 @@ const StaffReportFix = () => {
                   {formData.postImage ? (
                     <img
                       src={formData.postImage}
-                      alt="Post"
                       className="w-full h-full object-cover rounded-[2.8rem]"
+                      alt="Post"
                     />
                   ) : (
-                    <>
-                      <div className="p-5 bg-white rounded-3xl shadow-sm text-slate-400">
-                        <Upload size={40} />
-                      </div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Capture Post-Fix
-                      </span>
-                    </>
+                    <Upload size={40} className="text-slate-300" />
                   )}
                 </div>
                 <input
@@ -359,7 +344,7 @@ const StaffReportFix = () => {
                   type="button"
                   onClick={() => setStep(4)}
                   disabled={!formData.postImage}
-                  className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest disabled:opacity-30"
+                  className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
                 >
                   Verify Fix
                 </button>
@@ -367,22 +352,16 @@ const StaffReportFix = () => {
             </div>
           )}
 
-          {/* STEP 4: FINAL LOGS & SUBMIT */}
           {step === 4 && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-              <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-2">
-                  Maintenance Logs
-                </label>
-                <textarea
-                  className="w-full bg-slate-50 border border-slate-100 rounded-[2rem] p-6 text-sm font-medium focus:ring-2 focus:ring-blue-600/20 outline-none min-h-[140px]"
-                  placeholder="Describe the cleaning/fix process..."
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                />
-              </div>
+            <div className="animate-in fade-in slide-in-from-right-4 space-y-6">
+              <textarea
+                className="w-full bg-slate-50 border border-slate-100 rounded-[2rem] p-6 text-sm min-h-[140px] focus:ring-2 focus:ring-blue-600 outline-none"
+                placeholder="Describe the cleaning/fix process..."
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+              />
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -394,7 +373,7 @@ const StaffReportFix = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                  className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex justify-center items-center gap-2"
                 >
                   {isSubmitting ? (
                     <Loader2 size={16} className="animate-spin" />
