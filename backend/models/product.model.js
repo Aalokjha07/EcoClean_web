@@ -14,6 +14,7 @@ const ProductSchema = mongoose.Schema(
             type: String,
             required: [true, "Location address is required"],
         },
+        // Citizen's original photo
         imageBefore: {
             type: String,
             required: false,
@@ -26,9 +27,9 @@ const ProductSchema = mongoose.Schema(
         status: {
             type: String,
             required: true,
-            default: "pending", // Will be changed to "Assigned" or "Fixed" later
+            default: "pending", 
         },
-        // --- NEW ASSIGNMENT FIELDS ADDED HERE ---
+        // --- ASSIGNMENT FIELDS ---
         assignedStaff: { 
             type: String, 
             default: null 
@@ -40,6 +41,33 @@ const ProductSchema = mongoose.Schema(
         assignedAt: { 
             type: Date, 
             default: null 
+        },
+
+        // --- NEW RESOLUTION FIELDS (Staff Update) ---
+        // These will be filled when StaffReportFix.jsx is submitted
+        staffId: { 
+            type: String, 
+            default: null 
+        },
+        staffNotes: { 
+            type: String, 
+            default: "" 
+        },
+        staffLocation: { 
+            type: String, 
+            default: "" 
+        },
+        imageAfter: { 
+            type: String, 
+            default: null 
+        },
+        imageBefore2: { 
+            type: String, 
+            default: null 
+        },
+        resolvedAt: { 
+            type: Date, 
+            default: null 
         }
     },
     {
@@ -47,8 +75,6 @@ const ProductSchema = mongoose.Schema(
     }
 );
 
-// We keep the model name "Report" so your controller (Report.findById) works.
-// We keep the Schema name "ProductSchema" so your existing logic doesn't break.
 const Report = mongoose.model("Report", ProductSchema);
 
 module.exports = Report;

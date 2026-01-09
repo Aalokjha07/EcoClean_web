@@ -9,50 +9,39 @@ import {
   User,
   HardHat,
   Eye,
+  ShieldCheck,
+  Activity,
+  Clock,
 } from "lucide-react";
 
 const ReviewWorkEvidence = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [data, setData] = useState({ report: null, fix: null });
+  const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const SERVER_URL = "http://localhost:3000";
 
   useEffect(() => {
-    const fetchCombinedData = async () => {
+    const fetchReportData = async () => {
       try {
-        const repRes = await fetch(`${SERVER_URL}/api/Reports/${id}`);
-        const report = await repRes.json();
-
-        const fixRes = await fetch(`${SERVER_URL}/api/Fixes/report/${id}`);
-        const fix = fixRes.ok ? await fixRes.json() : null;
-
-        setData({ report, fix });
+        // We now pull everything from the Reports collection
+        const res = await fetch(`${SERVER_URL}/api/Reports/${id}`);
+        const data = await res.json();
+        setReport(data);
         setLoading(false);
       } catch (error) {
-        console.error("Fetch Error:", error);
+        console.error("Audit Fetch Error:", error);
         setLoading(false);
       }
     };
-    fetchCombinedData();
+    fetchReportData();
   }, [id]);
 
   const getFullUrl = (path) => {
-    if (!path || path === "undefined" || path === null) {
-      return "https://via.placeholder.com/600x400?text=No+Image+Path";
-    }
-
-    // Handle temporary blob URLs or full external links
-    if (path.startsWith("blob:") || path.startsWith("http")) {
-      return path;
-    }
-
-    // Handle stored filenames from your server
-    const cleanPath = path.replace(/^\/+/, "");
-    // If your backend serves from an /uploads folder, keep it here.
-    // If not, use `${SERVER_URL}/${cleanPath}`
-    return `${SERVER_URL}/uploads/${cleanPath}`;
+    if (!path) return "https://via.placeholder.com/600x400?text=No+Data+Found";
+    if (path.startsWith("data:") || path.startsWith("http")) return path;
+    return `${SERVER_URL}/${path.replace(/^\/+/, "")}`;
   };
 
   const handleUpdateStatus = async (newStatus) => {
@@ -64,202 +53,211 @@ const ReviewWorkEvidence = () => {
       });
 
       if (response.ok) {
-        alert(`Verification Complete: ${newStatus.toUpperCase()}`);
+        alert(`System Log: Report marked as ${newStatus.toUpperCase()}`);
         navigate("/admin/processed-reports");
       }
     } catch (error) {
-      alert("Database update failed.");
+      alert("Critical Update Error: Terminal connection failed.");
     }
   };
 
   if (loading)
     return (
-      <div className="h-screen flex items-center justify-center bg-[#f8fafc]">
-        <Loader2 className="animate-spin text-purple-600" size={40} />
+      <div className="h-screen flex flex-col items-center justify-center bg-[#0f172a] text-blue-400">
+        <Loader2 className="animate-spin mb-4" size={50} />
+        <p className="font-mono tracking-tighter animate-pulse">
+          INITIALIZING AUDIT DECRYPTOR...
+        </p>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-10 font-['Plus_Jakarta_Sans']">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto flex items-center justify-between mb-10">
+    <div className="min-h-screen bg-[#0f172a] p-6 text-slate-300 font-['Plus_Jakarta_Sans']">
+      {/* TECH HEADER */}
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between mb-8 gap-4 border-b border-slate-800 pb-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-500 hover:text-purple-600 font-bold transition-all"
+          className="flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-all font-mono text-xs"
         >
-          <ArrowLeft size={20} /> Back
+          <ArrowLeft size={16} /> RETURN_TO_BASE
         </button>
+
         <div className="text-center">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Audit Evidence
-          </h1>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Reviewing Database Records
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <ShieldCheck className="text-blue-500" size={24} />
+            <h1 className="text-2xl font-black text-white tracking-tighter uppercase">
+              Incident Audit Terminal
+            </h1>
+          </div>
+          <p className="text-[10px] font-mono text-blue-500/60 uppercase tracking-[0.3em]">
+            ID: {id?.slice(-12)} // SECURE_ACCESS_GRANTED
           </p>
         </div>
-        <div className="w-24"></div>
-      </div>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-        {/* --- LEFT SIDE: CITIZEN DATA --- */}
-        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-slate-100 flex flex-col">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
-              <User size={24} />
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-800 uppercase tracking-tighter">
-              Citizen Entry
-            </h2>
+        <div className="flex items-center gap-4 bg-slate-800/50 p-3 rounded-2xl border border-slate-700">
+          <div className="text-right">
+            <p className="text-[9px] font-bold text-slate-500 uppercase italic">
+              Current_Status
+            </p>
+            <p
+              className={`text-sm font-black ${
+                report?.status === "Resolved"
+                  ? "text-emerald-400"
+                  : "text-amber-400"
+              }`}
+            >
+              {report?.status?.toUpperCase()}
+            </p>
           </div>
-
-          <div className="space-y-6 flex-grow">
-            <DetailItem label="Report Title" value={data.report?.subject} />
-            <DetailItem
-              label="Location"
-              value={
-                data.report?.address ||
-                `Lat: ${data.report?.location?.lat}, Lng: ${data.report?.location?.lng}`
-              }
-              isLocation
-            />
-
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                Original Description
-              </label>
-              <div className="bg-slate-50 p-6 rounded-[2rem] text-slate-600 leading-relaxed italic border border-slate-100">
-                "{data.report?.description || "No description provided."}"
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                Initial Evidence
-              </label>
-              <img
-                src={getFullUrl(data.report?.imageBefore || data.report?.image)}
-                className="w-full h-80 object-cover rounded-[2.5rem] shadow-lg border-4 border-white bg-slate-100"
-                alt="Citizen Evidence"
-                onError={(e) =>
-                  (e.target.src =
-                    "https://via.placeholder.com/600x400?text=Initial+Evidence+Missing")
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* --- RIGHT SIDE: STAFF DATA --- */}
-        <div className="bg-slate-900 rounded-[3rem] p-8 shadow-xl text-white flex flex-col">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-green-500/20 text-green-400 rounded-2xl flex items-center justify-center">
-              <HardHat size={24} />
-            </div>
-            <h2 className="text-xl font-extrabold uppercase tracking-tighter">
-              Staff Submission
-            </h2>
-          </div>
-
-          <div className="space-y-6 flex-grow">
-            <DetailItem
-              label="Completion Status"
-              value={data.fix ? "RESOLVED" : "PENDING"}
-              isDark
-            />
-            <DetailItem
-              label="Verified Location"
-              value={data.fix?.location || data.report?.address}
-              isLocation
-              isDark
-            />
-
-            <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
-                Staff Remarks
-              </label>
-              <div className="bg-white/5 p-6 rounded-[2rem] text-slate-300 leading-relaxed border border-white/5">
-                {data.fix?.notes || "No closing remarks provided."}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 flex items-center gap-1">
-                  <Eye size={12} /> Work Reference
-                </label>
-                <img
-                  src={getFullUrl(
-                    data.fix?.imageBefore || data.report?.imageBefore
-                  )}
-                  className="w-full h-56 object-cover rounded-[1.5rem] opacity-40 border border-white/10 bg-slate-800"
-                  alt="Staff Reference"
-                />
-              </div>
-              {/* FIXED: Added Final Resolution Image here */}
-              <div>
-                <label className="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2 flex items-center gap-1">
-                  Final Resolution
-                </label>
-                <img
-                  src={getFullUrl(data.fix?.imageAfter || data.fix?.image)}
-                  className="w-full h-56 object-cover rounded-[1.5rem] border-2 border-green-500 shadow-xl shadow-green-500/20 bg-slate-800"
-                  alt="Final Resolution"
-                  onError={(e) =>
-                    (e.target.src =
-                      "https://via.placeholder.com/600x400?text=Staff+Evidence+Missing")
-                  }
-                />
-              </div>
-            </div>
-          </div>
+          <Activity size={20} className="text-blue-500" />
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
-        <button
-          onClick={() => handleUpdateStatus("validated")}
-          className="group flex items-center justify-center gap-3 py-6 bg-green-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-green-500/20 hover:bg-green-600 transition-all"
-        >
-          <CheckCircle size={24} /> Approve Work
-        </button>
-        <button
-          onClick={() => handleUpdateStatus("pending")}
-          className="group flex items-center justify-center gap-3 py-6 bg-white border-2 border-red-100 text-red-500 rounded-[2rem] font-black uppercase tracking-widest text-sm hover:bg-red-50 transition-all"
-        >
-          <XCircle size={24} /> Reject & Reopen
-        </button>
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* LEFT: INCIDENT LOG (Citizen) */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-slate-800/40 rounded-[2rem] p-6 border border-slate-700 shadow-2xl">
+            <h3 className="text-xs font-black text-blue-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <User size={14} /> Incident_Origins
+            </h3>
+            <DetailItem label="Subject" value={report?.subject} />
+            <DetailItem
+              label="Coordinates"
+              value={report?.address}
+              isLocation
+            />
+
+            <div className="mt-6">
+              <label className="text-[9px] font-black text-slate-500 uppercase mb-2 block">
+                Initial_Brief
+              </label>
+              <p className="text-sm text-slate-400 leading-relaxed bg-slate-900/50 p-4 rounded-xl border border-slate-800 italic">
+                "{report?.description}"
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/40 rounded-[2rem] p-6 border border-slate-700 shadow-2xl">
+            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">
+              Initial_Evidence_Frame
+            </h3>
+            <img
+              src={(() => {
+                const imgPath = report.imageBefore || report.image;
+                if (!imgPath)
+                  return "https://via.placeholder.com/400x200?text=No+Preview";
+                if (imgPath.startsWith("http") || imgPath.startsWith("blob:"))
+                  return imgPath;
+                return `${SERVER_URL}/uploads/${imgPath.replace(/^\//, "")}`;
+              })()}
+              alt="Trash"
+              className="card-img"
+              onError={(e) => {
+                e.target.src =
+                  "https://via.placeholder.com/400x200?text=Image+Not+Found";
+              }}
+            />
+          </div>
+        </div>
+
+        {/* RIGHT: RESOLUTION ANALYTICS (Staff) */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-blue-600/5 rounded-[2rem] p-8 border border-blue-500/20 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 opacity-10">
+              <HardHat size={120} />
+            </div>
+
+            <h3 className="text-xs font-black text-emerald-400 uppercase tracking-widest mb-8 flex items-center gap-2">
+              <CheckCircle size={14} /> Resolution_Data_Stream
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+              <div className="space-y-6">
+                <DetailItem
+                  label="Assigned_Officer"
+                  value={report?.assignedStaff || "SYSTEM_AUTO"}
+                />
+                <DetailItem
+                  label="Verification_GPS"
+                  value={report?.staffLocation || "PENDING"}
+                  isLocation
+                />
+                <div>
+                  <label className="text-[9px] font-black text-slate-500 uppercase mb-2 block">
+                    Staff_Closing_Remarks
+                  </label>
+                  <div className="bg-emerald-500/5 text-emerald-100 p-5 rounded-2xl border border-emerald-500/20 text-sm">
+                    {report?.staffNotes || "Awaiting final logs..."}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-[8px] font-black text-slate-500 uppercase text-center">
+                      Reference_Frame
+                    </p>
+                    <img
+                      src={getFullUrl(report?.imageBefore2)}
+                      className="w-full h-32 object-cover rounded-xl border border-slate-700 opacity-50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[8px] font-black text-emerald-500 uppercase text-center">
+                      Resolution_Frame
+                    </p>
+                    <img
+                      src={getFullUrl(report?.imageAfter)}
+                      className="w-full h-32 object-cover rounded-xl border-2 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                    />
+                  </div>
+                </div>
+                <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-slate-500">
+                    TIMESTAMP:
+                  </span>
+                  <span className="text-[10px] font-mono text-blue-400">
+                    {report?.resolvedAt
+                      ? new Date(report.resolvedAt).toLocaleString()
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ACTION OVERRIDE BUTTONS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => handleUpdateStatus("validated")}
+              className="flex items-center justify-center gap-3 py-6 bg-emerald-500 hover:bg-emerald-600 text-[#0f172a] rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-lg shadow-emerald-500/20"
+            >
+              <CheckCircle size={18} /> Deploy_Validation
+            </button>
+            <button
+              onClick={() => handleUpdateStatus("pending")}
+              className="flex items-center justify-center gap-3 py-6 bg-transparent border-2 border-red-500/50 hover:border-red-500 text-red-500 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all"
+            >
+              <XCircle size={18} /> Flag_As_Insufficient
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-const DetailItem = ({ label, value, isLocation, isDark }) => (
-  <div>
-    <label
-      className={`text-[10px] font-black uppercase tracking-widest block mb-1 ${
-        isDark ? "text-slate-500" : "text-slate-400"
-      }`}
-    >
+// COMPONENT: TECH DETAIL ITEM
+const DetailItem = ({ label, value, isLocation }) => (
+  <div className="border-l-2 border-slate-700 pl-4 py-1">
+    <label className="text-[9px] font-black text-slate-500 uppercase tracking-tighter block mb-1">
       {label}
     </label>
-    <div
-      className={`flex items-center gap-2 ${
-        isDark ? "text-white" : "text-slate-800"
-      }`}
-    >
-      {isLocation && (
-        <MapPin
-          size={16}
-          className={isDark ? "text-green-400" : "text-purple-600"}
-        />
-      )}
-      <p
-        className={`text-lg font-bold ${
-          value === "RESOLVED" ? "text-green-400" : ""
-        }`}
-      >
-        {value || "Not Recorded"}
+    <div className="flex items-center gap-2">
+      {isLocation && <MapPin size={12} className="text-blue-500" />}
+      <p className="text-sm font-bold text-white tracking-tight">
+        {value || "NULL_DATA"}
       </p>
     </div>
   </div>

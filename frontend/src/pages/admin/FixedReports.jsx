@@ -1,51 +1,45 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Loader2, Trash2, History, CheckCircle, Menu, X } from "lucide-react";
 
 const FixedReports = () => {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [reports, setReports] = useState([]);
-  const [fixes, setFixes] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const IMAGE_BASE_URL = "http://localhost:3000/uploads/";
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchValidatedData = async () => {
       try {
         const reportRes = await fetch("http://localhost:3000/api/Reports");
-        const reportData = await reportRes.json();
+        const allReports = await reportRes.json();
 
-        // Filter for Validated only
-        const validatedReports = reportData.filter(
-          (r) => r.status === "Validated"
+        // STRICT FILTER: Only show reports validated by the admin
+        // Note: Using lowercase 'validated' to match the handleUpdateStatus logic
+        const validatedOnly = allReports.filter(
+          (r) => r.status === "validated" || r.status === "Validated"
         );
-        setReports(validatedReports);
 
-        const fixRes = await fetch(
-          "http://localhost:3000/api/Report/fixes/submit"
-        );
-        const fixData = await fixRes.json();
-        setFixes(fixData);
+        setReports(validatedOnly);
       } catch (error) {
         console.error("Fetch error:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchValidatedData();
   }, []);
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/400x300?text=No+Image";
+    if (imagePath.startsWith("http") || imagePath.startsWith("data:"))
+      return imagePath;
 
-    // If the path is already a full URL (like a placeholder), return it
-    if (imagePath.startsWith("http")) return imagePath;
-
-    // Otherwise, point it to your backend server
     const BACKEND_URL = "http://localhost:3000";
-    return `${BACKEND_URL}${imagePath}`;
+    const cleanPath = imagePath.replace(/^\/+/, "");
+    return `${BACKEND_URL}/${cleanPath}`;
   };
 
   if (loading)
@@ -152,25 +146,6 @@ const FixedReports = () => {
                 </a>
               </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 ml-2">
-                Management
-              </p>
-              <div className="space-y-1">
-                <a
-                  href="#"
-                  className="flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-                >
-                  Staff Directory
-                </a>
-                <a
-                  href="#"
-                  className="flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-                >
-                  Fleet Tracking
-                </a>
-              </div>
-            </div>
           </div>
           <button className="mt-auto border-t border-purple-50 pt-6 flex items-center gap-3 p-4 text-red-500 font-bold text-sm bg-red-50 rounded-2xl hover:bg-red-100">
             Logout System
@@ -185,84 +160,94 @@ const FixedReports = () => {
             Fixed Reports
           </h1>
           <p className="text-emerald-500 text-sm font-bold uppercase tracking-widest mt-1">
-            Archived Success & Resolutions
+            Archived Success & Resolutions ({reports.length})
           </p>
         </div>
 
         <div className="flex-grow overflow-y-auto no-scrollbar pb-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reports.map((report) => {
-              const fix = fixes.find((f) => f.report_id === report._id);
-              return (
+          {reports.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-[3rem]">
+              <History size={48} className="mb-4 opacity-20" />
+              <p className="font-bold uppercase tracking-widest text-xs">
+                No validated reports found
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reports.map((report) => (
                 <div
                   key={report._id}
                   className="fixed-card p-8 rounded-[2.5rem] flex flex-col"
                 >
                   <div className="flex justify-between items-start mb-6">
-                    <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
+                    <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
                       <CheckCircle size={24} />
                     </div>
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-600 text-[10px] font-black rounded-lg uppercase tracking-wider">
-                      Resolved
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg uppercase tracking-wider border border-emerald-100">
+                      Validated
                     </span>
                   </div>
 
                   <div className="mb-4">
-                    <h3 className="text-xl font-extrabold text-slate-800 tracking-tight leading-tight uppercase">
-                      #{report._id.slice(-6)} - {report.address?.split(",")[0]}
+                    <h3 className="text-xl font-extrabold text-slate-800 tracking-tight leading-tight uppercase truncate">
+                      {report.subject}
                     </h3>
-                    <p className="text-emerald-600 text-[10px] font-black uppercase mt-1">
-                      Issue: {report.subject}
+                    <p className="text-slate-400 text-[10px] font-bold uppercase mt-1 flex items-center gap-1">
+                      ID: {report._id.slice(-8)} •{" "}
+                      {report.address?.split(",")[0]}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-6">
-                    <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100">
+                    <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
                       <img
-                        src={getImageUrl(report.imageBefore)}
-                        className="w-full h-full object-cover opacity-60"
-                        alt="Before"
+                        src={getImageUrl(report.image || report.imageBefore)}
+                        className="w-full h-full object-cover opacity-60 grayscale"
+                        alt="Initial"
                       />
                       <span className="absolute bottom-2 left-2 bg-black/50 text-[8px] text-white px-2 py-0.5 rounded font-black uppercase">
-                        Before
+                        Initial
                       </span>
                     </div>
-                    <div className="relative aspect-video rounded-xl overflow-hidden border border-emerald-100">
+                    <div className="relative aspect-video rounded-xl overflow-hidden border border-emerald-200 bg-emerald-50">
                       <img
-                        src={getImageUrl(fix?.imageAfter)}
+                        src={getImageUrl(report.imageAfter)}
                         className="w-full h-full object-cover"
-                        alt="After"
+                        alt="Fixed"
                       />
                       <span className="absolute bottom-2 left-2 bg-emerald-600 text-[8px] text-white px-2 py-0.5 rounded font-black uppercase">
-                        After
+                        Fixed
                       </span>
                     </div>
                   </div>
 
                   <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50 mb-6">
-                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">
-                      Resolution Summary
+                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">
+                      Staff Resolution Notes
                     </p>
                     <p className="text-xs text-slate-600 font-semibold italic line-clamp-2">
                       "
-                      {fix?.notes ||
-                        "Clean-up completed and verified by admin."}
+                      {report.staffNotes ||
+                        "Cleanup verified and archived by administration."}
                       "
                     </p>
                   </div>
 
                   <div className="mt-auto pt-6 border-t border-slate-50 flex gap-3">
-                    <button className="flex-grow flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
-                      <History size={14} /> Full History
+                    <button
+                      onClick={() => navigate(`/admin/review/${report._id}`)}
+                      className="flex-grow flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                    >
+                      <History size={14} /> View Audit
                     </button>
-                    <button className="w-12 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-100">
+                    <button className="w-12 h-10 flex items-center justify-center bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-100">
                       <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -15,7 +15,7 @@ import {
 const StaffReportFix = () => {
   const navigate = useNavigate();
 
-  // 1. DATA RETRIEVAL
+  // 1. DATA RETRIEVAL FROM LOCALSTORAGE
   const reportId = localStorage.getItem("activeReportId");
   const subject = localStorage.getItem("activeReportSubject");
   const initialAddress = localStorage.getItem("activeReportAddress");
@@ -26,12 +26,28 @@ const StaffReportFix = () => {
 
   const [formData, setFormData] = useState({
     location: initialAddress || "",
-    preImage: null, // Will store the blob: URL
-    postImage: null, // Will store the blob: URL
+    preImage: null, // Staff's 'Before' photo
+    postImage: null, // Staff's 'After' photo
     notes: "",
   });
 
-  // --- LOGIC: Fetch Staff Location ---
+  // --- HELPER: CONVERT BLOB URL TO BASE64 ---
+  const getBase64FromBlob = async (blobUrl) => {
+    try {
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error("Conversion error:", err);
+      return null;
+    }
+  };
+
   const fetchCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
@@ -61,11 +77,9 @@ const StaffReportFix = () => {
     }
   }, [step]);
 
-  // --- LOGIC: Handle Image as Temporary Blob ---
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      // Create temporary blob URL: blob:http://localhost:5173/...
       const blobUrl = URL.createObjectURL(file);
       setFormData((prev) => ({
         ...prev,
@@ -74,7 +88,7 @@ const StaffReportFix = () => {
     }
   };
 
-  // --- LOGIC: Final Submission ---
+  // --- LOGIC: FINAL SUBMISSION (ALIGNED WITH model.js) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.notes || !formData.postImage) {
@@ -85,38 +99,42 @@ const StaffReportFix = () => {
     setIsSubmitting(true);
 
     try {
-      // ACTION 1: Submit Fix Details (Sending the blob strings)
-      const fixResponse = await fetch(
-        "http://localhost:3000/api/Report/fixes/submit",
+      // Step A: Convert Blobs to Base64 Strings for MongoDB
+      const base64Pre = formData.preImage
+        ? await getBase64FromBlob(formData.preImage)
+        : null;
+      const base64Post = await getBase64FromBlob(formData.postImage);
+
+      // Step B: Send to backend (PUT request to update the specific Report)
+      const response = await fetch(
+        `http://localhost:3000/api/Reports/${reportId}`,
         {
-          method: "POST",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            report_id: reportId,
-            subject: subject,
-            staffId: "staff_001",
-            location: formData.location,
-            imageBefore: formData.preImage, // Now sending blob: link
-            imageAfter: formData.postImage, // Now sending blob: link
-            notes: formData.notes,
+            // These keys match your Mongoose Schema exactly
+            status: "Resolved",
+            staffId: "staff_001", // Hardcoded for now, or get from Auth context
+            staffNotes: formData.notes,
+            staffLocation: formData.location,
+            imageBefore2: base64Pre, // Updating the report with the 'Before' evidence
+            imageAfter: base64Post, // Adding the 'After' evidence
+            resolvedAt: new Date().toISOString(),
           }),
         }
       );
-      if (!fixResponse.ok) throw new Error("Step 1 Failed.");
 
-      // ACTION 2: Update Report Status
-      await fetch(`http://localhost:3000/api/Reports/${reportId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Resolved" }),
-      }).catch(() => console.log("DB Updated."));
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update report.");
+      }
 
-      // SUCCESS FLOW
+      // SUCCESS FLOW: Cleanup local storage and navigate
       localStorage.removeItem("activeReportId");
       localStorage.removeItem("activeReportSubject");
       localStorage.removeItem("activeReportAddress");
 
-      alert("Task Processed successfully!");
+      alert("Task Resolved and Report Updated Successfully!");
       navigate("/staff/active-reports");
     } catch (error) {
       console.error("Workflow Error:", error);
@@ -163,11 +181,12 @@ const StaffReportFix = () => {
             Report Fix
           </h2>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2 italic">
-            Fixing Task: <span className="text-blue-600">{reportId}</span>
+            Updating Original Report:{" "}
+            <span className="text-blue-600">{reportId}</span>
           </p>
         </header>
 
-        {/* Stepper UI */}
+        {/* Stepper */}
         <div className="flex items-center justify-between mb-10 px-2">
           {[1, 2, 3, 4].map((num) => (
             <div key={num} className="flex items-center">
@@ -192,6 +211,7 @@ const StaffReportFix = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {/* STEP 1: Verification Location */}
           {step === 1 && (
             <div className="animate-in fade-in slide-in-from-right-4">
               <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white mb-6 relative overflow-hidden">
@@ -233,10 +253,11 @@ const StaffReportFix = () => {
             </div>
           )}
 
+          {/* STEP 2: Before Image */}
           {step === 2 && (
             <div className="animate-in fade-in slide-in-from-right-4">
               <h3 className="font-extrabold mb-4 text-slate-800">
-                1. Initial Condition
+                1. Initial Condition (Staff Verification)
               </h3>
               <label className="cursor-pointer block">
                 <div
@@ -284,10 +305,11 @@ const StaffReportFix = () => {
             </div>
           )}
 
+          {/* STEP 3: After Image */}
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-right-4">
               <h3 className="font-extrabold mb-4 text-slate-800">
-                2. Evidence of Fix
+                2. Evidence of Fix (Final Result)
               </h3>
               <label className="cursor-pointer block">
                 <div
@@ -335,11 +357,12 @@ const StaffReportFix = () => {
             </div>
           )}
 
+          {/* STEP 4: Notes & Submit */}
           {step === 4 && (
             <div className="animate-in fade-in slide-in-from-right-4 space-y-6">
               <textarea
                 className="w-full bg-slate-50 border border-slate-100 rounded-[2rem] p-6 text-sm min-h-[140px] focus:ring-2 focus:ring-blue-600 outline-none"
-                placeholder="Describe the cleaning/fix process..."
+                placeholder="Describe the cleaning/fix process (e.g. 'Garbage removed and area disinfected')..."
                 value={formData.notes}
                 onChange={(e) =>
                   setFormData({ ...formData, notes: e.target.value })

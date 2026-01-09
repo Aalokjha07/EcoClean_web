@@ -23,10 +23,16 @@ const AdminDashboard = () => {
         const response = await fetch("http://localhost:3000/api/Reports");
         const data = await response.json();
 
-        // Status Logic
-        const pending = data.filter((r) => r.status === "Pending");
-        const resolved = data.filter((r) => r.status === "Resolved");
-        const validated = data.filter((r) => r.status === "Validated");
+        // Status Logic - Case Insensitive to handle "Pending" vs "pending"
+        const pending = data.filter(
+          (r) => r.status?.toLowerCase() === "pending" || !r.status
+        );
+        const resolved = data.filter(
+          (r) => r.status?.toLowerCase() === "resolved"
+        );
+        const validated = data.filter(
+          (r) => r.status?.toLowerCase() === "validated"
+        );
 
         setActiveReports(pending);
         setProcessedReports(resolved);
@@ -36,7 +42,8 @@ const AdminDashboard = () => {
           totalReports: data.length.toString(),
           activeStaff: "48 / 52",
           pendingCount: pending.length.toString(),
-          revenue: `$${data.length * 150}`,
+          // Business logic: $150 per validated report + $50 for pending ones
+          revenue: `$${validated.length * 150 + pending.length * 50}`,
         });
 
         setLoading(false);
@@ -54,14 +61,14 @@ const AdminDashboard = () => {
   return (
     <div className="admin-portal-container min-h-screen bg-[#f5f3ff] font-['Plus_Jakarta_Sans'] relative overflow-x-hidden">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        .dashboard-grid-container { height: calc(100vh - 250px); min-height: 500px; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .drawer-content { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .drawer-backdrop { transition: opacity 0.4s ease; }
-        .report-item { transition: all 0.2s ease; border: 1px solid #ede9fe; background: #ffffff; cursor: pointer; }
-        .report-item:hover { border-color: #7c3aed; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.1); }
-      `}</style>
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+          .dashboard-grid-container { height: calc(100vh - 250px); min-height: 500px; }
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .drawer-content { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+          .drawer-backdrop { transition: opacity 0.4s ease; }
+          .report-item { transition: all 0.2s ease; border: 1px solid #ede9fe; background: #ffffff; cursor: pointer; }
+          .report-item:hover { border-color: #7c3aed; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.1); }
+        `}</style>
 
       {/* NAVBAR */}
       <nav className="sticky top-0 w-full bg-white/80 backdrop-blur-md border-b border-purple-100 px-8 py-4 flex justify-between items-center z-50">
@@ -79,7 +86,6 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* TOP RIGHT MENU TRIGGER */}
         <button
           onClick={toggleMenu}
           className="p-3 hover:bg-purple-50 rounded-2xl border border-purple-100 transition-colors"
@@ -101,7 +107,7 @@ const AdminDashboard = () => {
         </button>
       </nav>
 
-      {/* SIDE MENU OVERLAY (The structure you sent) */}
+      {/* SIDE MENU OVERLAY - UNCHANGED */}
       <div
         id="sideMenu"
         className={`fixed inset-0 z-[60] ${isMenuOpen ? "" : "invisible"}`}
@@ -201,13 +207,23 @@ const AdminDashboard = () => {
 
       {/* MAIN CONTENT AREA */}
       <main className="p-6 md:p-10 flex flex-col gap-8 max-w-[1600px] mx-auto w-full">
-        <header>
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-            Admin Overview
-          </h1>
-          <p className="text-purple-500 text-sm font-bold uppercase tracking-widest mt-1">
-            Status: Live Tracking
-          </p>
+        <header className="flex justify-between items-end">
+          <div>
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+              Admin Overview
+            </h1>
+            <p className="text-purple-500 text-sm font-bold uppercase tracking-widest mt-1">
+              Status: Live Tracking
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              Last Update
+            </p>
+            <p className="text-sm font-bold text-slate-900">
+              {new Date().toLocaleTimeString()}
+            </p>
+          </div>
         </header>
 
         {/* Stats Grid */}
@@ -226,19 +242,32 @@ const AdminDashboard = () => {
         <div className="dashboard-grid-container grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Active (Pending) */}
           <section className="bg-white rounded-[3rem] border border-purple-100 p-8 flex flex-col overflow-hidden shadow-sm">
-            <h3 className="font-extrabold text-slate-900 text-xl mb-6 flex items-center gap-2">
-              Active Reports{" "}
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-extrabold text-slate-900 text-xl flex items-center gap-2">
+                Active{" "}
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              </h3>
+              <span className="bg-red-50 text-red-600 text-xs font-black px-3 py-1 rounded-xl">
+                {activeReports.length} Reports
+              </span>
+            </div>
             <div className="flex-grow overflow-y-auto no-scrollbar space-y-4">
               {activeReports.map((report) => (
-                <div key={report._id} className="report-item p-5 rounded-3xl">
-                  <h4 className="text-sm font-extrabold text-slate-800 uppercase truncate">
-                    {report.subject}
-                  </h4>
-                  <p className="text-[10px] text-red-500 font-bold uppercase mt-1">
-                    Pending Assignment
-                  </p>
+                <div
+                  key={report._id}
+                  className="report-item p-5 rounded-3xl flex justify-between items-center group"
+                >
+                  <div className="truncate pr-4">
+                    <h4 className="text-sm font-extrabold text-slate-800 uppercase truncate">
+                      {report.subject}
+                    </h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                      {report.address?.split(",")[0] || "Unknown Location"}
+                    </p>
+                  </div>
+                  <span className="text-[9px] font-black text-red-500 bg-red-50 px-2 py-1 rounded-lg uppercase whitespace-nowrap">
+                    New
+                  </span>
                 </div>
               ))}
             </div>
@@ -250,8 +279,8 @@ const AdminDashboard = () => {
               <h3 className="font-extrabold text-slate-900 text-xl">
                 Processed
               </h3>
-              <span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">
-                Resolved
+              <span className="bg-green-100 text-green-700 text-xs font-black px-3 py-1 rounded-xl">
+                {processedReports.length} Ready
               </span>
             </div>
             <div className="flex-grow overflow-y-auto no-scrollbar space-y-4">
@@ -263,11 +292,11 @@ const AdminDashboard = () => {
                   <h4 className="text-sm font-extrabold text-slate-800 uppercase truncate">
                     {report.subject}
                   </h4>
-                  <div className="mt-4 w-full bg-green-50 h-2 rounded-full overflow-hidden">
-                    <div className="bg-green-500 h-full w-[95%]"></div>
+                  <div className="mt-4 w-full bg-green-50 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-green-500 h-full w-[100%]"></div>
                   </div>
-                  <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-tighter text-right">
-                    Awaiting Validation
+                  <p className="text-[9px] text-green-600 font-bold mt-2 uppercase tracking-tighter">
+                    Ready for Validation
                   </p>
                 </div>
               ))}
@@ -276,18 +305,37 @@ const AdminDashboard = () => {
 
           {/* Fixed (Validated) */}
           <section className="bg-purple-700 rounded-[3rem] p-8 flex flex-col overflow-hidden shadow-2xl text-white">
-            <h3 className="font-extrabold text-xl mb-6">Fixed Reports</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-extrabold text-xl">Fixed Reports</h3>
+              <span className="bg-white/20 text-white text-xs font-black px-3 py-1 rounded-xl backdrop-blur-md">
+                {fixedReports.length} Done
+              </span>
+            </div>
             <div className="flex-grow overflow-y-auto no-scrollbar space-y-4">
               {fixedReports.map((report) => (
                 <div
                   key={report._id}
                   className="p-5 bg-white/10 border border-white/5 rounded-3xl hover:bg-white/20 transition-colors cursor-default"
                 >
-                  <h4 className="text-sm font-extrabold uppercase truncate">
-                    {report.subject}
-                  </h4>
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-sm font-extrabold uppercase truncate pr-2">
+                      {report.subject}
+                    </h4>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-green-400 shrink-0"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
                   <p className="text-[10px] text-purple-200 font-bold uppercase mt-1">
-                    Archived & Verified
+                    Verification Complete
                   </p>
                 </div>
               ))}

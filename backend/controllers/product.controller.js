@@ -126,25 +126,25 @@ const deleteReport = async (req, res) => {
     }
 };
 const updateReport = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
+    try {
+        const { id } = req.params;
+        
+        // We use req.body to catch all the staff fields 
+        // (staffId, staffNotes, staffLocation, imageAfter)
+        const updatedReport = await Report.findByIdAndUpdate(
+            id, 
+            { $set: req.body }, 
+            { new: true, runValidators: true }
+        );
 
-    // This uses the 'Product' model imported above
-    const updatedReport = await Report.findByIdAndUpdate(
-      id,
-      { status: status }, 
-      { new: true }
-    );
+        if (!updatedReport) {
+            return res.status(404).json({ message: "Report not found" });
+        }
 
-    if (!updatedReport) {
-      return res.status(404).json({ message: "Report not found" });
+        res.status(200).json(updatedReport);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-
-    res.status(200).json(updatedReport);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
 };
 // In your Fix Controller
  const getFixByReportId = async (req, res) => {

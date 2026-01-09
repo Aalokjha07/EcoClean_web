@@ -237,6 +237,9 @@ const ProcessedReports = () => {
                   <p className="text-slate-400 text-xs font-bold mt-1 mb-6">
                     {report.address}
                   </p>
+                  <p className="text-slate-400 text-xs font-bold mt-1 mb-6">
+                    {report.assignedStaff}
+                  </p>
 
                   <div className="mt-auto pt-6 border-t border-purple-50 flex gap-3">
                     <button

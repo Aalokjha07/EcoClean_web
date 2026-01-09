@@ -8,19 +8,18 @@ const ActiveReports = () => {
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
-  const SERVER_URL = "http://localhost:3000"; // Define base URL for images
+  const SERVER_URL = "http://localhost:3000";
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  // Fetch Reports
+  // 1. FETCH PENDING REPORTS
   useEffect(() => {
     const fetchActiveReports = async () => {
       try {
         const response = await fetch(`${SERVER_URL}/api/Reports`);
         const data = await response.json();
 
-        // --- UPDATED LOGIC: Fetch ONLY those whose status is 'pending' ---
-        // Note: I used lowercase 'pending' to match your controller's addReport logic
+        // Filter for 'pending' status only
         const pendingOnly = data.filter(
           (r) => r.status?.toLowerCase() === "pending"
         );
@@ -35,6 +34,7 @@ const ActiveReports = () => {
     fetchActiveReports();
   }, []);
 
+  // 2. DELETE LOGIC
   const handleDelete = async (id) => {
     if (window.confirm("Delete this report permanently?")) {
       try {
@@ -60,8 +60,6 @@ const ActiveReports = () => {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .drawer-content { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .drawer-backdrop { transition: opacity 0.3s ease; }
         .report-card { transition: all 0.3s ease; border: 1px solid #ede9fe; background: #ffffff; }
         .report-card:hover { 
             border-color: #7c3aed; 
@@ -108,16 +106,16 @@ const ActiveReports = () => {
         </button>
       </nav>
 
-      {/* Side Menu Drawer (Kept Same) */}
+      {/* Side Menu Drawer */}
       <div className={`fixed inset-0 z-[60] ${isMenuOpen ? "" : "invisible"}`}>
         <div
           onClick={toggleMenu}
-          className={`drawer-backdrop absolute inset-0 bg-purple-950/20 backdrop-blur-sm ${
+          className={`absolute inset-0 bg-purple-950/20 backdrop-blur-sm transition-opacity duration-300 ${
             isMenuOpen ? "opacity-100" : "opacity-0"
           }`}
         ></div>
         <div
-          className={`drawer-content absolute top-0 right-0 bottom-0 w-80 bg-white shadow-2xl p-8 flex flex-col transform ${
+          className={`absolute top-0 right-0 bottom-0 w-80 bg-white shadow-2xl p-8 flex flex-col transform transition-transform duration-300 ${
             isMenuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -132,32 +130,60 @@ const ActiveReports = () => {
               ✕
             </button>
           </div>
-          <div className="space-y-1">
-            <button
-              onClick={() => navigate("/admin")}
-              className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-            >
-              Main Overview
-            </button>
-            <button
-              onClick={() => navigate("/admin/active-reports")}
-              className="w-full text-left flex items-center gap-3 p-4 bg-purple-50 text-purple-700 rounded-2xl font-bold text-sm"
-            >
-              Active Reports
-            </button>
-            <button
-              onClick={() => navigate("/admin/processed-reports")}
-              className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-            >
-              Processed Reports
-            </button>
-            <button
-              onClick={() => navigate("/admin/fixed-reports")}
-              className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm"
-            >
-              Fixed Reports
-            </button>
+
+          <div className="space-y-8 flex-grow overflow-y-auto no-scrollbar">
+            {/* Dashboard Category */}
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400 mb-4 ml-2">
+                Dashboard
+              </p>
+              <div className="space-y-1">
+                {[
+                  { name: "Main Overview", path: "/admin" },
+                  { name: "Active Reports", path: "/admin/active-reports" },
+                  {
+                    name: "Processed Reports",
+                    path: "/admin/processed-reports",
+                  },
+                  { name: "Fixed Reports", path: "/admin/fixed-reports" },
+                ].map((item) => (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      navigate(item.path);
+                      toggleMenu();
+                    }}
+                    className={`w-full text-left flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-colors ${
+                      window.location.pathname === item.path
+                        ? "bg-purple-50 text-purple-700"
+                        : "text-slate-600 hover:bg-purple-50"
+                    }`}
+                  >
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Management Category */}
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 ml-2">
+                Management
+              </p>
+              <div className="space-y-1">
+                <button className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm">
+                  Staff Directory
+                </button>
+                <button className="w-full text-left flex items-center gap-3 p-4 text-slate-600 hover:bg-purple-50 rounded-2xl font-bold text-sm">
+                  Fleet Tracking
+                </button>
+              </div>
+            </div>
           </div>
+
+          <button className="mt-auto pt-6 flex items-center gap-3 p-4 text-red-500 font-bold text-sm bg-red-50 rounded-2xl hover:bg-red-100 transition-colors">
+            Logout System
+          </button>
         </div>
       </div>
 
@@ -180,7 +206,7 @@ const ActiveReports = () => {
               placeholder="Search reports..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white border border-purple-100 pl-10 pr-4 py-3 rounded-2xl font-bold text-xs focus:outline-none focus:ring-2 focus:ring-purple-400 w-64 shadow-sm"
+              className="bg-white border border-purple-100 pl-10 pr-4 py-3 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-purple-400 w-64 shadow-sm"
             />
           </div>
         </div>
@@ -197,14 +223,23 @@ const ActiveReports = () => {
                   key={report._id}
                   className="report-card p-6 rounded-[2.5rem] flex flex-col"
                 >
-                  {/* IMAGE ADDED HERE */}
+                  {/* IMAGE HANDLER */}
                   <div className="card-img-container">
                     <img
-                      src={
-                        report.imageBefore
-                          ? `${SERVER_URL}${report.imageBefore}`
-                          : "https://via.placeholder.com/400x200?text=No+Preview"
-                      }
+                      src={(() => {
+                        const imgPath = report.imageBefore || report.image;
+                        if (!imgPath)
+                          return "https://via.placeholder.com/400x200?text=No+Preview";
+                        if (
+                          imgPath.startsWith("http") ||
+                          imgPath.startsWith("blob:")
+                        )
+                          return imgPath;
+                        return `${SERVER_URL}/uploads/${imgPath.replace(
+                          /^\//,
+                          ""
+                        )}`;
+                      })()}
                       alt="Trash"
                       className="card-img"
                       onError={(e) => {
@@ -224,10 +259,10 @@ const ActiveReports = () => {
                   </div>
 
                   <div className="mb-4">
-                    <h3 className="text-lg font-extrabold text-slate-800 leading-tight truncate">
+                    <h3 className="text-lg font-extrabold text-slate-800 tracking-tight truncate">
                       {report.subject}
                     </h3>
-                    <p className="text-purple-600 text-[10px] font-bold mt-1 uppercase tracking-widest truncate">
+                    <p className="text-purple-600 text-[10px] font-bold mt-1 uppercase truncate tracking-widest">
                       {report.address}
                     </p>
                   </div>
@@ -241,13 +276,13 @@ const ActiveReports = () => {
                   <div className="mt-auto pt-4 border-t border-purple-50 flex gap-3">
                     <button
                       onClick={() => navigate(`/admin/report/${report._id}`)}
-                      className="flex-grow flex items-center justify-center py-3 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all"
+                      className="flex-grow py-3 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-purple-100 active:scale-95"
                     >
                       Assign Staff
                     </button>
                     <button
                       onClick={() => handleDelete(report._id)}
-                      className="w-12 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                      className="w-12 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-100"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"

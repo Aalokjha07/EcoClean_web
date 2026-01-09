@@ -98,37 +98,52 @@ export default function MyReports() {
                 key={report._id}
                 className="report-card p-6 rounded-[2.5rem] flex flex-col"
               >
-                {/* Image Preview - FIXED PATH */}
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  {/* Subject - Takes up remaining space and truncates if too long */}
+                  <h3 className="text-lg font-extrabold text-slate-800 tracking-tight truncate">
+                    {report.subject}
+                  </h3>
+
+                  {/* Status Badge - Fixed width, high visibility */}
+                  <span
+                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap border ${
+                      report.status === "Resolved"
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        : report.status === "validated"
+                        ? "bg-blue-50 text-blue-600 border-blue-100"
+                        : "bg-amber-50 text-amber-600 border-amber-100"
+                    }`}
+                  >
+                    {report.status}
+                  </span>
+                </div>
+
+                {/* Image Preview - FIXED FOR BASE64 AND PATHS */}
+
                 <div className="aspect-video rounded-3xl overflow-hidden mb-6 border border-slate-100 bg-slate-100">
                   <img
-                    src={getFullUrl(report.imageBefore || report.image)}
+                    src={
+                      report.imageBefore?.startsWith("data:")
+                        ? report.imageBefore
+                        : getFullUrl(report.imageBefore || report.image)
+                    }
                     className="w-full h-full object-cover"
                     alt="report preview"
-                    onError={(e) =>
-                      (e.target.src =
-                        "https://via.placeholder.com/600x400?text=Image+Not+Found")
-                    }
+                    onError={(e) => {
+                      // Fallback if the primary image fails
+                      if (report.imageAfter?.startsWith("data:")) {
+                        e.target.src = report.imageAfter;
+                      } else {
+                        e.target.src =
+                          "https://via.placeholder.com/600x400?text=Image+Not+Found";
+                      }
+                    }}
                   />
                 </div>
 
-                <div className="mb-4">
-                  <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
-                    {report.subject}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className={`text-[10px] font-black uppercase tracking-widest ${
-                        report.status === "Resolved"
-                          ? "text-emerald-500"
-                          : "text-amber-500"
-                      }`}
-                    >
-                      {report.status}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="mt-auto pt-6 border-t border-slate-50 flex gap-3">
+                  {/* </div>
+                <div> */}
                   <button
                     onClick={() => setSelectedReport(report)}
                     className="flex-grow flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase transition-all active:scale-95"
