@@ -1,5 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// home
+import HomePage from "./pages/homepage";
+//user
 import UserDash from "./pages/user/UserDash";
 import Profile from "./pages/user/Profile";
 import EditProfile from "./pages/user/EditProfile";
@@ -29,6 +32,8 @@ export default function App() {
     <Router>
       <div className="bg-[#F8FAFC] min-h-screen text-slate-900">
         <Routes>
+          <Route path="/" element={<HomePage />} />
+          {/* user */}
           <Route path="/user" element={<UserDash />} />
           <Route path="/user/profile" element={<Profile />} />
           <Route path="/user/edit-profile" element={<EditProfile />} />
