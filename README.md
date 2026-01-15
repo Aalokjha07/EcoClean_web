@@ -56,6 +56,7 @@ The platform utilizes the @react-google-maps/api for precise location reporting.
 Interactive Markers: Users can drag markers to pinpoint exact issue locations.
 
 Geolocation: One-tap "Find My Location" for instant reporting.
+![Uploading image.png…]()
 
 #images of development model
 <img width="1110" height="549" alt="image" src="https://github.com/user-attachments/assets/6b46432a-dbe3-40fd-ae3a-3962e3dd143c" />
@@ -71,4 +72,5 @@ Glassmorphism Elements: Modern modal overlays for success and error handling.
 
 📜 License
 Distributed under the MIT License.
+
 
