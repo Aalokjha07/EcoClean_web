@@ -67,12 +67,10 @@ const FleetMap = () => {
     setLoading(true);
     try {
       const res = await axios.get(SERVER_URL);
-      const pending = res.data.filter(
-        (t) => t.status?.toLowerCase() === "pending"
-      );
-      setTasks(pending);
+      const Assigned = res.data.filter((item) => item.status === "Assigned");
+      setTasks(Assigned);
 
-      pending.forEach((task) => {
+      Assigned.forEach((task) => {
         const coords = task.address?.match(/-?\d+\.\d+/g);
         if (coords && coords.length >= 2) {
           const marker = new window.google.maps.Marker({
@@ -325,7 +323,9 @@ const FleetMap = () => {
         {/* RIGHT PART: TASKS */}
         <div className="flex-[3] flex flex-col bg-slate-50 border-l border-slate-200 shadow-2xl z-10">
           <div className="p-6 border-b border-slate-200 bg-white">
-            <h2 className="text-xl font-black text-slate-900">Pending Tasks</h2>
+            <h2 className="text-xl font-black text-slate-900">
+              ASSIGNED Tasks
+            </h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">
                 {tasks.length} Issues Found
