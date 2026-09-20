@@ -107,7 +107,7 @@ const StaffReportFix = () => {
 
       // Step B: Send to backend (PUT request to update the specific Report)
       const response = await fetch(
-        `http://https://ecoclean-web-k9tw.onrender.com/api/Reports/${reportId}`,
+        `https://ecoclean-web-k9tw.onrender.com/api/Reports/${reportId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

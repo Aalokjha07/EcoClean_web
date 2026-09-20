@@ -10,7 +10,7 @@ export default function MyReports() {
   // State for the Detail Popup
   const [selectedReport, setSelectedReport] = useState(null);
 
-  const SERVER_URL = "http://https://ecoclean-web-k9tw.onrender.com";
+  const SERVER_URL = "https://ecoclean-web-k9tw.onrender.com";
 
   useEffect(() => {
     const fetchReports = async () => {

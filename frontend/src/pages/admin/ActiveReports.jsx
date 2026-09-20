@@ -8,7 +8,7 @@ const ActiveReports = () => {
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
-  const SERVER_URL = "http://https://ecoclean-web-k9tw.onrender.com";
+  const SERVER_URL = "https://ecoclean-web-k9tw.onrender.com";
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 

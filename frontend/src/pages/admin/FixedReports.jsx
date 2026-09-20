@@ -14,7 +14,7 @@ const FixedReports = () => {
     const fetchValidatedData = async () => {
       try {
         const reportRes = await fetch(
-          "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+          "https://ecoclean-web-k9tw.onrender.com/api/Reports",
         );
         const allReports = await reportRes.json();
 
@@ -39,7 +39,7 @@ const FixedReports = () => {
     if (imagePath.startsWith("http") || imagePath.startsWith("data:"))
       return imagePath;
 
-    const BACKEND_URL = "http://https://ecoclean-web-k9tw.onrender.com";
+    const BACKEND_URL = "https://ecoclean-web-k9tw.onrender.com";
     const cleanPath = imagePath.replace(/^\/+/, "");
     return `${BACKEND_URL}/${cleanPath}`;
   };

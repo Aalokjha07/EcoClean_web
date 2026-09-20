@@ -12,7 +12,7 @@ const ReportDetail = () => {
     const fetchReportDetail = async () => {
       try {
         const response = await fetch(
-          `http://https://ecoclean-web-k9tw.onrender.com/api/Report/${id}`,
+          `https://ecoclean-web-k9tw.onrender.com/api/Report/${id}`,
         );
         const data = await response.json();
         setReport(data);

@@ -75,7 +75,7 @@ export default function IssueReport() {
     try {
       // 3. API Call (Targeting the plural /Reports route)
       const response = await fetch(
-        "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+        "https://ecoclean-web-k9tw.onrender.com/api/Reports",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

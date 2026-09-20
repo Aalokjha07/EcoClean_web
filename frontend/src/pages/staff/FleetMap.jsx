@@ -27,7 +27,7 @@
 //   const [selectedTask, setSelectedTask] = useState(null);
 //   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-//   const SERVER_URL = "http://https://ecoclean-web-k9tw.onrender.com/api/Reports";
+//   const SERVER_URL = "https://ecoclean-web-k9tw.onrender.com/api/Reports";
 //   const baseCoords = { lat: 30.3782, lng: 76.7767 };
 
 //   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -489,8 +489,7 @@ const FleetMap = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
 
-  const SERVER_URL =
-    "http://https://ecoclean-web-k9tw.onrender.com/api/Reports";
+  const SERVER_URL = "https://ecoclean-web-k9tw.onrender.com/api/Reports";
   const baseCoords = { lat: 30.3782, lng: 76.7767 };
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);

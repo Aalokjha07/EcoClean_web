@@ -21,7 +21,7 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         const response = await fetch(
-          "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+          "https://ecoclean-web-k9tw.onrender.com/api/Reports",
         );
         const data = await response.json();
 

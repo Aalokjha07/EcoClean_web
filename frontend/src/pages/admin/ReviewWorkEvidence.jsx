@@ -20,7 +20,7 @@ const ReviewWorkEvidence = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const SERVER_URL = "http://https://ecoclean-web-k9tw.onrender.com";
+  const SERVER_URL = "https://ecoclean-web-k9tw.onrender.com";
 
   useEffect(() => {
     const fetchReportData = async () => {
