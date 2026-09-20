@@ -3,6 +3,7 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 const fs = require("fs");
+require("dotenv").config();
 
 const ReportRoute = require("./routes/product.route.js");
 const Fix = require("./models/fix.model.js"); // Import your new Fix model
