@@ -8,7 +8,7 @@ const ActiveReports = () => {
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
-  const SERVER_URL = "http://localhost:3000";
+  const SERVER_URL = "http://https://ecoclean-web-k9tw.onrender.com";
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -21,7 +21,7 @@ const ActiveReports = () => {
 
         // Filter for 'pending' status only
         const pendingOnly = data.filter(
-          (r) => r.status?.toLowerCase() === "pending"
+          (r) => r.status?.toLowerCase() === "pending",
         );
 
         setReports(pendingOnly);
@@ -51,7 +51,7 @@ const ActiveReports = () => {
   const filteredReports = reports.filter(
     (report) =>
       report.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.address?.toLowerCase().includes(searchQuery.toLowerCase())
+      report.address?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -237,7 +237,7 @@ const ActiveReports = () => {
                           return imgPath;
                         return `${SERVER_URL}/uploads/${imgPath.replace(
                           /^\//,
-                          ""
+                          "",
                         )}`;
                       })()}
                       alt="Trash"

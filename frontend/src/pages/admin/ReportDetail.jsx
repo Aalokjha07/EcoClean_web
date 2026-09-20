@@ -30,7 +30,7 @@ const ReportDetail = () => {
 
         // Ensure this URL exactly matches your backend route
         const response = await fetch(
-          `http://localhost:3000/api/Report/${cleanId}`
+          `http://https://ecoclean-web-k9tw.onrender.com/api/Report/${cleanId}`,
         );
 
         if (!response.ok) {
@@ -62,7 +62,7 @@ const ReportDetail = () => {
     try {
       const cleanId = id.startsWith(":") ? id.slice(1) : id;
       const response = await fetch(
-        `http://localhost:3000/api/Report/assign/${cleanId}`,
+        `http://https://ecoclean-web-k9tw.onrender.com/api/Report/assign/${cleanId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -70,7 +70,7 @@ const ReportDetail = () => {
             assignedStaff: selectedStaff,
             department: selectedDept,
           }),
-        }
+        },
       );
 
       if (response.ok) {

@@ -67,7 +67,7 @@ const StaffReportFix = () => {
         setIsLocating(false);
         alert("Location access denied. Please enable GPS.");
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true },
     );
   };
 
@@ -107,7 +107,7 @@ const StaffReportFix = () => {
 
       // Step B: Send to backend (PUT request to update the specific Report)
       const response = await fetch(
-        `http://localhost:3000/api/Reports/${reportId}`,
+        `http://https://ecoclean-web-k9tw.onrender.com/api/Reports/${reportId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -121,7 +121,7 @@ const StaffReportFix = () => {
             imageAfter: base64Post, // Adding the 'After' evidence
             resolvedAt: new Date().toISOString(),
           }),
-        }
+        },
       );
 
       if (!response.ok) {

@@ -14,12 +14,14 @@ const StaffMyFixes = () => {
   useEffect(() => {
     const fetchMyFixes = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/Reports");
+        const response = await fetch(
+          "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+        );
         const data = await response.json();
 
         // Filter for "validated" status
         const validatedReports = data.filter(
-          (report) => report.status?.toLowerCase() === "validated"
+          (report) => report.status?.toLowerCase() === "validated",
         );
 
         setFixes(validatedReports);

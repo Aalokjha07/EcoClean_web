@@ -27,13 +27,13 @@ export default function IssueReport() {
     if (!mapInstance.current && mapContainer.current) {
       const map = L.map(mapContainer.current, { zoomControl: false }).setView(
         [20.5937, 78.9629],
-        5
+        5,
       );
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       ).addTo(map);
       const marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(
-        map
+        map,
       );
       marker.on("dragend", () => {
         const { lat, lng } = marker.getLatLng();
@@ -74,11 +74,14 @@ export default function IssueReport() {
 
     try {
       // 3. API Call (Targeting the plural /Reports route)
-      const response = await fetch("http://localhost:3000/api/Reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reportData),
-      });
+      const response = await fetch(
+        "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(reportData),
+        },
+      );
 
       if (response.ok) {
         setModal({
@@ -99,7 +102,7 @@ export default function IssueReport() {
       setModal({
         active: true,
         title: "Connection Failed",
-        msg: "Cannot reach the server. Please check if your Node.js backend is running on port 3000.",
+        msg: "Cannot reach the server Error code 500 .",
         isError: true,
       });
     } finally {

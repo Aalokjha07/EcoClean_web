@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function EditProfile() {
   const [avatar, setAvatar] = useState(
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
   );
   const [showToast, setShowToast] = useState(false);
   const navigate = useNavigate();

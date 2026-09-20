@@ -10,7 +10,7 @@ export default function MyReports() {
   // State for the Detail Popup
   const [selectedReport, setSelectedReport] = useState(null);
 
-  const SERVER_URL = "http://localhost:3000";
+  const SERVER_URL = "http://https://ecoclean-web-k9tw.onrender.com";
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -47,7 +47,7 @@ export default function MyReports() {
   };
 
   const filteredReports = reports.filter(
-    (report) => filter === "All" || report.status === filter
+    (report) => filter === "All" || report.status === filter,
   );
 
   return (
@@ -110,8 +110,8 @@ export default function MyReports() {
                       report.status === "Resolved"
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                         : report.status === "validated"
-                        ? "bg-blue-50 text-blue-600 border-blue-100"
-                        : "bg-amber-50 text-amber-600 border-amber-100"
+                          ? "bg-blue-50 text-blue-600 border-blue-100"
+                          : "bg-amber-50 text-amber-600 border-amber-100"
                     }`}
                   >
                     {report.status}
@@ -237,7 +237,7 @@ export default function MyReports() {
                     <p className="text-sm font-bold text-slate-700">
                       {new Date(selectedReport.createdAt).toLocaleDateString(
                         undefined,
-                        { dateStyle: "long" }
+                        { dateStyle: "long" },
                       )}
                     </p>
                   </div>

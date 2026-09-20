@@ -14,10 +14,12 @@ const ProcessedReports = () => {
   useEffect(() => {
     const fetchProcessedReports = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/Reports");
+        const response = await fetch(
+          "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+        );
         const data = await response.json();
         const processedOnly = data.filter(
-          (report) => report.status === "Resolved"
+          (report) => report.status === "Resolved",
         );
         setReports(processedOnly);
       } catch (error) {

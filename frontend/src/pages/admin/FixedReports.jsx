@@ -13,13 +13,15 @@ const FixedReports = () => {
   useEffect(() => {
     const fetchValidatedData = async () => {
       try {
-        const reportRes = await fetch("http://localhost:3000/api/Reports");
+        const reportRes = await fetch(
+          "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+        );
         const allReports = await reportRes.json();
 
         // STRICT FILTER: Only show reports validated by the admin
         // Note: Using lowercase 'validated' to match the handleUpdateStatus logic
         const validatedOnly = allReports.filter(
-          (r) => r.status === "validated" || r.status === "Validated"
+          (r) => r.status === "validated" || r.status === "Validated",
         );
 
         setReports(validatedOnly);
@@ -37,7 +39,7 @@ const FixedReports = () => {
     if (imagePath.startsWith("http") || imagePath.startsWith("data:"))
       return imagePath;
 
-    const BACKEND_URL = "http://localhost:3000";
+    const BACKEND_URL = "http://https://ecoclean-web-k9tw.onrender.com";
     const cleanPath = imagePath.replace(/^\/+/, "");
     return `${BACKEND_URL}/${cleanPath}`;
   };

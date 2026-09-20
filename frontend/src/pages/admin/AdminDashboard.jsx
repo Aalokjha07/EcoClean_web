@@ -20,18 +20,20 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/Reports");
+        const response = await fetch(
+          "http://https://ecoclean-web-k9tw.onrender.com/api/Reports",
+        );
         const data = await response.json();
 
         // Status Logic - Case Insensitive to handle "Pending" vs "pending"
         const pending = data.filter(
-          (r) => r.status?.toLowerCase() === "pending" || !r.status
+          (r) => r.status?.toLowerCase() === "pending" || !r.status,
         );
         const resolved = data.filter(
-          (r) => r.status?.toLowerCase() === "resolved"
+          (r) => r.status?.toLowerCase() === "resolved",
         );
         const validated = data.filter(
-          (r) => r.status?.toLowerCase() === "validated"
+          (r) => r.status?.toLowerCase() === "validated",
         );
 
         setActiveReports(pending);

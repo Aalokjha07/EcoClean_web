@@ -11,7 +11,9 @@ const ReportDetail = () => {
   useEffect(() => {
     const fetchReportDetail = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/Report/${id}`);
+        const response = await fetch(
+          `http://https://ecoclean-web-k9tw.onrender.com/api/Report/${id}`,
+        );
         const data = await response.json();
         setReport(data);
         setLoading(false);
